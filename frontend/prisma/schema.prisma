@@ -176,3 +176,27 @@ model SkillExecution {
   @@index([expertId])
   @@index([skillId])
 }
+
+
+// ── Twin Chat: Nodal Audit Log (Phase 6) ──────────────────────────────────────
+// Logs the entire trace (Retrieval -> Reasoning -> Generation) for transparency.
+
+model ChatAuditLog {
+  id             String   @id @default(uuid())
+  expertId       String   @map("expert_id")
+  sessionId      String   @map("session_id")
+
+  userQuery      String   @map("user_query")
+  retrievedCases String[] @map("retrieved_cases") // Logic Vault IDs
+  rationale      String   // The explicit Chain of Thought
+  finalResponse  String   @map("final_response")
+  confidence     Float
+  latencyMs      Int      @map("latency_ms")
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("chat_audit_logs")
+  @@index([expertId])
+  @@index([sessionId])
+}
+

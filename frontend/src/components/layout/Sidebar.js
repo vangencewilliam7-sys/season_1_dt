@@ -7,6 +7,7 @@ const NAV = [
   { href: '/knowledge-hub',  label: 'Knowledge Hub',  icon: '⬡' },
   { href: '/persona',        label: 'Persona',        icon: '◎' },
   { href: '/chat',           label: 'Twin Chat',      icon: '◇' },
+  { href: '/glass-box',      label: 'Glass Box',      icon: '🔍' },
   { href: '/skills',         label: 'Skills',         icon: '◆' },
 ]
 

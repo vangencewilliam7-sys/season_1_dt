@@ -30,19 +30,37 @@ export default function ChatPage() {
     setLoading(true)
 
     try {
-      const res = await fetch(`${API}/chat/message`, {
+      const res = await fetch(`${API}/api/chat/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ expert_id: 'demo', message: input, session_id: 'demo-session' }),
       })
       const data = await res.json()
-      setMessages(prev => [...prev, {
+      const assistantMessage = {
         role: 'assistant',
         content: data.response || 'No response received.',
         confidence: data.confidence,
         mode: data.persona_mode,
         sources: data.sources || [],
-      }])
+        rationale: data.rationale,
+      }
+      setMessages(prev => [...prev, assistantMessage])
+
+      // Log trace to localStorage for the Glass Box page
+      if (data.rationale) {
+        const trace = {
+          id: Math.random().toString(36).substr(2, 9),
+          query: input,
+          rationale: data.rationale,
+          response: data.response,
+          sources: data.sources,
+          confidence: data.confidence,
+          latency: data.latency_ms,
+          timestamp: new Date().toISOString()
+        }
+        const existing = JSON.parse(localStorage.getItem('glass_box_traces') || '[]')
+        localStorage.setItem('glass_box_traces', JSON.stringify([trace, ...existing]))
+      }
     } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -114,20 +132,22 @@ export default function ChatPage() {
 
                 {/* Metadata for assistant messages */}
                 {msg.role === 'assistant' && msg.confidence !== null && (
-                  <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                    {msg.confidence !== undefined && (
-                      <span className={`badge ${msg.confidence >= 0.7 ? 'badge-green' : 'badge-amber'}`}>
-                        {msg.confidence !== null ? `${Math.round(msg.confidence * 100)}% confidence` : '—'}
-                      </span>
-                    )}
-                    {msg.mode && (
-                      <span className={`badge ${msg.mode === 'primary' ? 'badge-teal' : 'badge-amber'}`}>
-                        {msg.mode === 'primary' ? '⚕ Expert Voice' : '◎ Deputy Mode'}
-                      </span>
-                    )}
-                    {msg.sources?.length > 0 && (
-                      <span className="badge badge-blue">{msg.sources.length} sources</span>
-                    )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {msg.confidence !== undefined && (
+                        <span className={`badge ${msg.confidence >= 0.7 ? 'badge-green' : 'badge-amber'}`}>
+                          {msg.confidence !== null ? `${Math.round(msg.confidence * 100)}% confidence` : '—'}
+                        </span>
+                      )}
+                      {msg.mode && (
+                        <span className={`badge ${msg.mode === 'primary' ? 'badge-teal' : 'badge-amber'}`}>
+                          {msg.mode === 'primary' ? '⚕ Expert Voice' : '◎ Deputy Mode'}
+                        </span>
+                      )}
+                      {msg.sources?.length > 0 && (
+                        <span className="badge badge-blue">{msg.sources.length} sources</span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
