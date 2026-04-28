@@ -1,0 +1,178 @@
+// =============================================================================
+// prisma/schema.prisma
+// Digital Twin — Database Schema (Prisma v5 + Supabase)
+// =============================================================================
+// Tables:
+//   document_chunks    → Knowledge Hub: parsed hierarchical document content
+//   master_cases       → Knowledge Hub: expert decisions from HITL loop
+//   decision_gaps      → Knowledge Hub: divergence scanner findings
+//   persona_manifests  → Expert Persona: compiled PersonaManifest JSON
+//   pipeline_state     → LangGraph checkpointing for long-running extractions
+//   skill_executions   → Audit log of skill invocations
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")    // Pooled — runtime queries via PgBouncer
+  directUrl = env("DIRECT_URL")      // Direct — migrations only (bypasses PgBouncer)
+}
+
+
+// ── Knowledge Hub: Document Chunks ────────────────────────────────────────────
+// Output of the Hierarchical Parser (ACT 1).
+// Preserves full H1 → H2 → H3 structure, including gap placeholders.
+
+model DocumentChunk {
+  id               String   @id @default(uuid())
+  documentId       String   @map("document_id")
+  expertId         String   @map("expert_id")
+
+  content          String
+  level            Int                           // 1=H1, 2=H2, 3=H3, 99=body
+  headingText      String?  @map("heading_text")
+  parentId         String?  @map("parent_id")
+  sectionPath      String   @default("") @map("section_path")
+
+  isStructuralGap  Boolean  @default(false) @map("is_structural_gap")
+
+  sourcePath       String   @default("") @map("source_path")
+  pageNumber       Int?     @map("page_number")
+  embeddingModel   String?  @map("embedding_model")
+
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  // Relations
+  masterCases  MasterCase[]  @relation("SourceChunk")
+  decisionGaps DecisionGap[] @relation("GapSource")
+
+  @@map("document_chunks")
+  @@index([expertId])
+  @@index([documentId])
+  @@index([parentId])
+}
+
+
+// ── Knowledge Hub: Master Cases ───────────────────────────────────────────────
+// Expert's crystallized decisions from the HITL (Socratic) loop.
+
+model MasterCase {
+  id              String   @id @default(uuid())
+  expertId        String   @map("expert_id")
+  scenarioId      String   @map("scenario_id")
+  sourceChunkId   String   @map("source_chunk_id")
+
+  expertDecision  String   @map("expert_decision")
+  chainOfThought  String[] @map("chain_of_thought")
+  logicTags       String[] @map("logic_tags")
+  confidenceNote  String?  @map("confidence_note")
+  impactType      String?  @map("impact_type")
+
+  version         Int      @default(1)
+  supersededBy    String?  @map("superseded_by")
+  embeddingModel  String?  @map("embedding_model")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  sourceChunk DocumentChunk @relation("SourceChunk", fields: [sourceChunkId], references: [id])
+
+  @@map("master_cases")
+  @@index([expertId])
+  @@index([sourceChunkId])
+}
+
+
+// ── Knowledge Hub: Decision Gaps ──────────────────────────────────────────────
+// Soft-rule markers found by the Divergence Scanner.
+
+model DecisionGap {
+  id                 String   @id @default(uuid())
+  sourceChunkId      String   @map("source_chunk_id")
+
+  gapType            String   @map("gap_type")
+  ambiguousText      String   @map("ambiguous_text")
+  generatedScenario  String?  @map("generated_scenario")
+  resolved           Boolean  @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  sourceChunk DocumentChunk @relation("GapSource", fields: [sourceChunkId], references: [id])
+
+  @@map("decision_gaps")
+  @@index([sourceChunkId])
+  @@index([resolved])
+}
+
+
+// ── Expert Persona: Persona Manifests ─────────────────────────────────────────
+// The compiled output of the Persona Extraction framework.
+
+model PersonaManifest {
+  id              String    @id @default(uuid())
+  expertId        String    @map("expert_id")
+  manifestVersion Int       @default(1) @map("manifest_version")
+
+  // Full PersonaManifest stored as JSONB
+  manifestJson    Json      @map("manifest_json")
+
+  shadowApproved  Boolean   @default(false) @map("shadow_approved")
+  approvedAt      DateTime? @map("approved_at")
+  approvedBy      String?   @map("approved_by")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("persona_manifests")
+  @@index([expertId])
+  @@index([shadowApproved])
+}
+
+
+// ── LangGraph: Pipeline State ─────────────────────────────────────────────────
+// LangGraph checkpointing — allows async HITL (expert responds hours later).
+
+model PipelineState {
+  id          String   @id @default(uuid())
+  expertId    String   @map("expert_id")
+  sessionId   String   @unique @map("session_id")
+
+  state       Json
+  currentNode String?  @map("current_node")
+  status      String   @default("running")   // "running" | "paused" | "completed" | "error"
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("pipeline_state")
+  @@index([expertId])
+  @@index([status])
+}
+
+
+// ── Skills: Execution Audit Log ───────────────────────────────────────────────
+// Every skill execution logged for transparency — "Glass Box" auditability.
+
+model SkillExecution {
+  id         String   @id @default(uuid())
+  expertId   String   @map("expert_id")
+  skillId    String   @map("skill_id")
+  skillType  String   @map("skill_type")   // "base" | "functional"
+
+  inputParams Json     @map("input_params")
+  output      Json?
+  success     Boolean
+  errorMsg    String?  @map("error_msg")
+
+  manifestId String?  @map("manifest_id")
+  caseIds    String[] @map("case_ids")
+
+  executedAt DateTime @default(now()) @map("executed_at")
+
+  @@map("skill_executions")
+  @@index([expertId])
+  @@index([skillId])
+}
