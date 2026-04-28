@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow Mode | Expert Review Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-950 text-slate-200 font-inter">
+    <div id="app" class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar: Discovery Queue -->
+        <aside class="w-80 bg-slate-900/50 border-r border-slate-800 flex flex-col">
+            <div class="p-6 border-b border-slate-800">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center shadow-lg shadow-sky-500/20">
+                        <i data-lucide="shield-check" class="text-slate-950 w-5 h-5"></i>
+                    </div>
+                    <h1 class="text-xl font-bold font-outfit tracking-tight text-white">Shadow Mode</h1>
+                </div>
+                <p class="text-xs text-slate-500 uppercase tracking-widest font-semibold">Discovery Queue</p>
+            </div>
+            
+            <div id="job-list" class="flex-1 overflow-y-auto p-4 space-y-3">
+                <!-- Jobs populated here -->
+                <div class="p-8 text-center text-slate-600 italic text-sm">
+                    Scanning for pending reviews...
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-800 text-[10px] text-slate-600 flex justify-between">
+                <span>V1.0.0-PROD</span>
+                <span id="connection-status" class="flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                    Live Connection
+                </span>
+            </div>
+        </aside>
+
+        <!-- Main Review Area -->
+        <main class="flex-1 flex flex-col bg-slate-950 relative overflow-hidden">
+            
+            <!-- Welcome State -->
+            <div id="empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-12 transition-all duration-700">
+                <div class="w-24 h-24 bg-slate-900 rounded-3xl flex items-center justify-center mb-6 border border-slate-800">
+                    <i data-lucide="search" class="w-10 h-10 text-slate-700"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-2 font-outfit">Select a Persona to Review</h2>
+                <p class="text-slate-500 max-w-sm">Every automated extraction requires expert sign-off before being deployed to production twin runtimes.</p>
+            </div>
+
+            <!-- Review Content (Hidden by default) -->
+            <div id="review-content" class="hidden flex-1 flex flex-col overflow-hidden">
+                
+                <!-- Header -->
+                <header class="h-20 border-b border-slate-800 flex items-center justify-between px-8 bg-slate-900/20 backdrop-blur-md sticky top-0 z-10">
+                    <div>
+                        <h2 id="active-expert-name" class="text-xl font-bold text-white font-outfit">---</h2>
+                        <p id="active-expert-role" class="text-sm text-sky-400 font-medium">---</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button onclick="rejectModal.show()" class="px-5 py-2.5 rounded-xl border border-slate-800 hover:bg-red-500/10 hover:border-red-500/50 hover:text-red-400 transition-all text-sm font-semibold flex items-center gap-2">
+                            <i data-lucide="x-circle" class="w-4 h-4"></i>
+                            Reject
+                        </button>
+                        <button id="approve-btn" onclick="approveManifest()" class="px-6 py-2.5 rounded-xl bg-sky-500 text-slate-950 hover:bg-sky-400 transition-all text-sm font-bold shadow-lg shadow-sky-500/20 flex items-center gap-2">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                            Approve & Publish
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Scrollable Body -->
+                <div class="flex-1 overflow-y-auto p-8">
+                    <div class="max-w-5xl mx-auto space-y-8">
+                        
+                        <!-- Metadata Grid -->
+                        <div class="grid grid-cols-3 gap-6">
+                            <div class="bg-slate-900/40 border border-slate-800 p-5 rounded-2xl">
+                                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Extraction Confidence</p>
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-2xl font-bold text-white font-outfit">94%</span>
+                                    <span class="text-xs text-emerald-400 font-semibold">High Intensity</span>
+                                </div>
+                            </div>
+                            <div class="bg-slate-900/40 border border-slate-800 p-5 rounded-2xl">
+                                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Source Documents</p>
+                                <p id="doc-count" class="text-2xl font-bold text-white font-outfit">--</p>
+                            </div>
+                            <div class="bg-slate-900/40 border border-slate-800 p-5 rounded-2xl">
+                                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Extraction ID</p>
+                                <p id="job-id-display" class="text-xs font-mono text-slate-400 mt-2 truncate">---</p>
+                            </div>
+                        </div>
+
+                        <!-- Heuristics Editor -->
+                        <section>
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-bold text-white font-outfit">Extracted Heuristics</h3>
+                                <span class="text-xs text-slate-500 bg-slate-900 px-3 py-1 rounded-full border border-slate-800">Directly Editable</span>
+                            </div>
+                            <div id="heuristics-container" class="space-y-4">
+                                <!-- Heuristics cards here -->
+                            </div>
+                        </section>
+
+                        <!-- Communication & Drop Zones Grid -->
+                        <div class="grid grid-cols-2 gap-8 pt-4">
+                            <section>
+                                <h3 class="text-lg font-bold text-white font-outfit mb-4">Communication Style</h3>
+                                <div class="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl space-y-4">
+                                    <div>
+                                        <label class="text-[10px] text-slate-500 uppercase font-bold mb-1 block">Tones</label>
+                                        <div id="tone-tags" class="flex flex-wrap gap-2"></div>
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-slate-500 uppercase font-bold mb-1 block">Preferred Framing</label>
+                                        <input id="framing-input" type="text" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-300 focus:outline-none focus:border-sky-500/50 transition-all">
+                                    </div>
+                                </div>
+                            </section>
+                            <section>
+                                <h3 class="text-lg font-bold text-white font-outfit mb-4">Knowledge Boundaries</h3>
+                                <div class="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl">
+                                    <label class="text-[10px] text-slate-500 uppercase font-bold mb-3 block">Drop Zone Triggers</label>
+                                    <div id="drop-zones" class="space-y-2"></div>
+                                </div>
+                            </section>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Reject Modal -->
+    <div id="reject-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-6 backdrop-blur-xl bg-slate-950/40">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 class="text-xl font-bold text-white mb-2 font-outfit">Reject Manifest</h3>
+            <p class="text-sm text-slate-400 mb-6">Explain what's wrong. This will trigger a re-extraction loop with your notes as guidance.</p>
+            
+            <label class="text-[10px] text-slate-500 uppercase font-bold mb-1 block">Correction Notes</label>
+            <textarea id="rejection-notes" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-slate-300 focus:outline-none focus:border-red-500/50 transition-all mb-6" placeholder="The tone is too formal, and heuristic #2 misses the emphasis on risk..."></textarea>
+            
+            <div class="flex gap-3">
+                <button onclick="rejectModal.hide()" class="flex-1 py-3 rounded-xl border border-slate-800 text-slate-400 font-semibold hover:bg-slate-800 transition-all">Cancel</button>
+                <button id="confirm-reject-btn" onclick="submitRejection()" class="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-400 transition-all shadow-lg shadow-red-500/20">Confirm Rejection</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
