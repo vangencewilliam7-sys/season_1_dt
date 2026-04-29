@@ -4,6 +4,7 @@ import shutil
 import uuid
 from ..graph.pipeline import create_pipeline
 from ..models.state import GraphState
+from ..services.pii_scrubber import PIIScrubber
 
 router = APIRouter()
 
@@ -84,6 +85,8 @@ async def resolve_scenario(document_id: str, scenario_id: str, audio: UploadFile
     from ..services.stt import STTService
     stt = STTService()
     transcript = stt.transcribe_audio(temp_path)
+    scrubber = PIIScrubber()
+    transcript = scrubber.scrub(transcript)
     
     # 3. Clean up temp file
     os.remove(temp_path)
@@ -101,17 +104,19 @@ async def commit_to_vault(scenario_id: str, expert_decision: str, archetype: str
     from ..services.embeddings import EmbeddingService
     from ..services.supabase_client import SupabaseService
     
+    scrubber = PIIScrubber(industry=industry)
     embedder = EmbeddingService()
     db = SupabaseService()
+    clean_expert_decision = scrubber.scrub(expert_decision)
     
     # 1. Generate embedding for the verified scenario context
     # This allows the runtime query to match patient questions to this specific expert logic
-    vector = embedder.get_embedding(expert_decision)
+    vector = embedder.get_embedding(clean_expert_decision)
     
     # 2. Persist to high-purity expert_dna table
     data = {
         "scenario_id": scenario_id,
-        "expert_decision": expert_decision,
+        "expert_decision": clean_expert_decision,
         "impact_archetype": archetype,
         "industry": industry,
         "embedding": vector

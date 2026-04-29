@@ -1,6 +1,7 @@
 from ...models.state import GraphState
 from ...services.parser import HierarchicalParser
 from ...services.embeddings import EmbeddingService
+from ...services.pii_scrubber import PIIScrubber
 from ...services.supabase_client import SupabaseService
 from ...models.schemas import DocumentChunk
 import os
@@ -15,6 +16,7 @@ def ingestion_node(state: GraphState) -> GraphState:
         return state
 
     parser = HierarchicalParser()
+    scrubber = PIIScrubber()
     embedder = EmbeddingService()
     db = SupabaseService()
 
@@ -29,6 +31,9 @@ def ingestion_node(state: GraphState) -> GraphState:
     else:
         print(f"[ERROR] Unsupported file type: {file_path}")
         return state
+
+    for chunk in chunks:
+        chunk["content"] = scrubber.scrub(chunk["content"])
 
     # Generate embeddings in batch and save to Supabase
     texts = [c["content"] for c in chunks]

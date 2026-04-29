@@ -1,5 +1,8 @@
 'use client'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { getSupabaseClient, hasSupabaseConfig } from '../../lib/supabase'
 import { 
   DashboardIcon, 
   KnowledgeIcon, 
@@ -19,6 +22,31 @@ const NAV = [
 ]
 
 export default function Sidebar({ active }) {
+  const router = useRouter()
+  const [userName, setUserName] = useState('')
+
+  useEffect(() => {
+    if (!hasSupabaseConfig) {
+      return
+    }
+
+    const supabase = getSupabaseClient()
+    supabase.auth.getUser().then(({ data }) => {
+      const fullName = data?.user?.user_metadata?.full_name
+      setUserName(fullName || '')
+    })
+  }, [])
+
+  async function handleSignOut() {
+    if (hasSupabaseConfig) {
+      const supabase = getSupabaseClient()
+      await supabase.auth.signOut()
+      setUserName('')
+    }
+
+    router.push('/auth/signin')
+  }
+
   return (
     <aside style={{
       width: 240,
@@ -53,7 +81,8 @@ export default function Sidebar({ active }) {
           Navigation
         </div>
         {NAV.map(item => {
-          const isActive = active === item.href
+          const isActive =
+            active === item.href || (item.href === '/' && active === '/dashboard')
           return (
             <Link key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
               <div style={{
@@ -80,6 +109,45 @@ export default function Sidebar({ active }) {
 
       {/* Status dot */}
       <div style={{ padding: '16px 20px', borderTop: '1px solid #E2E8F0' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 10,
+        }}>
+          <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600 }}>
+            {userName || 'Guest session'}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {!userName && (
+              <Link
+                href="/auth/signin"
+                style={{
+                  fontSize: 11,
+                  color: '#0077B6',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                }}
+              >
+                Sign in
+              </Link>
+            )}
+            <button
+              onClick={handleSignOut}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                padding: 0,
+                fontSize: 11,
+                color: '#475569',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#64748B' }}>
           <span style={{
             width: 7, height: 7, borderRadius: '50%',

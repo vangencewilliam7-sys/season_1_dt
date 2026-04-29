@@ -17,6 +17,7 @@ class BypassService:
         self.role = ctx['expert_role']
 
     def check_risk(self, prompt: str) -> bool:
+        """Expects prompt to be pre-scrubbed before any LLM call."""
         # 1. Keyword check (Fast, deterministic)
         prompt_lower = prompt.lower()
         if any(keyword in prompt_lower for keyword in self.emergency_keywords):

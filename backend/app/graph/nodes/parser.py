@@ -1,6 +1,7 @@
 from ...models.state import GraphState
 from ...models.schemas import MasterCase, AuditEntry
 from ...services.context_manager import ContextManager
+from ...services.pii_scrubber import PIIScrubber
 from openai import OpenAI
 import os
 import json
@@ -9,6 +10,7 @@ import datetime
 def parser_node(state: GraphState) -> GraphState:
     # Load industry context
     context_manager = ContextManager()
+    scrubber = PIIScrubber()
     ctx = context_manager.get_context()
     
     print(f"--- PARSER: Extracting {ctx['domain_name']} logic from {len(state.expert_transcripts)} transcripts ---")
@@ -29,11 +31,12 @@ def parser_node(state: GraphState) -> GraphState:
                 scenario_id=transcript.scenario_id
             )
         else:
+            clean_transcript = scrubber.scrub(transcript.raw_text)
             prompt = f"""
             Context: {ctx['domain_name']}
             Expert Role: {ctx['expert_role']}
             
-            Expert Transcript: "{transcript.raw_text}"
+            Expert Transcript: "{clean_transcript}"
             
             Deconstruct this {ctx['expert_role']} response into a structured logic record.
             
@@ -59,10 +62,10 @@ def parser_node(state: GraphState) -> GraphState:
             source_id = gap.source_chunk_id if gap else "unknown"
 
             case = MasterCase(
-                expert_decision=data["expert_decision"],
-                chain_of_thought=data["chain_of_thought"],
+                expert_decision=scrubber.scrub(data["expert_decision"]),
+                chain_of_thought=[scrubber.scrub(step) for step in data["chain_of_thought"]],
                 logic_tags=data["logic_tags"],
-                confidence_note=data.get("confidence_note"),
+                confidence_note=scrubber.scrub(data.get("confidence_note", "")) if data.get("confidence_note") else None,
                 source_chunk_id=source_id,
                 scenario_id=transcript.scenario_id
             )

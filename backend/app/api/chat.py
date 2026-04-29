@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from ..graph.chat_pipeline import create_chat_pipeline
 from ..models.chat_state import ChatState
+from ..services.pii_scrubber import PIIScrubber
 import time
 
 router = APIRouter()
@@ -13,11 +14,12 @@ class ChatRequest(BaseModel):
 
 @router.post("/chat/message")
 async def chat_message(req: ChatRequest):
+    scrubber = PIIScrubber()
     pipeline = create_chat_pipeline()
     initial_state = ChatState(
         expert_id=req.expert_id,
         session_id=req.session_id,
-        query=req.message
+        query=scrubber.scrub(req.message)
     )
     
     try:
@@ -37,10 +39,10 @@ async def chat_message(req: ChatRequest):
         latency = int((time.time() - start_time) * 1000)
         
         # Extract from state dict returned by LangGraph
-        response_text = result_state_dict.get("response", "")
+        response_text = scrubber.restore(result_state_dict.get("response", ""))
         confidence = result_state_dict.get("confidence", 0.0)
         persona_mode = result_state_dict.get("persona_mode", "offline")
-        rationale = result_state_dict.get("rationale", "")
+        rationale = scrubber.restore(result_state_dict.get("rationale", ""))
         sources = [f"Logic Vault ID: {r.get('scenario_id', 'Unknown')}" for r in result_state_dict.get("retrieved_cases", [])]
         
         return {
@@ -54,4 +56,3 @@ async def chat_message(req: ChatRequest):
     except Exception as e:
         print(f"Chat Engine Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-

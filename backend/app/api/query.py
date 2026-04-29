@@ -3,26 +3,31 @@ from ..services.embeddings import EmbeddingService
 from ..services.supabase_client import SupabaseService
 from ..services.bypass import BypassService
 from ..services.guardrail_service import GuardrailService
+from ..services.pii_scrubber import PIIScrubber
 
 router = APIRouter()
 
 @router.post("/query/search")
 async def semantic_search(query: str, limit: int = 5):
     # (previous implementation)
+    scrubber = PIIScrubber()
+    clean_query = scrubber.scrub(query)
     embedder = EmbeddingService()
     db = SupabaseService()
-    query_vector = embedder.get_embedding(query)
-    results = db.semantic_search(query_vector, limit=limit)
+    query_vector = embedder.get_embedding(clean_query)
+    results = scrubber.restore_object(db.semantic_search(query_vector, limit=limit))
     return {"query": query, "results": results}
 
 @router.post("/query")
 async def query_twin(prompt: str):
+    scrubber = PIIScrubber()
+    clean_prompt = scrubber.scrub(prompt)
     bypass = BypassService()
     embedder = EmbeddingService()
     db = SupabaseService()
     
     # 1. Emergency Bypass
-    if bypass.check_risk(prompt):
+    if bypass.check_risk(clean_prompt):
         return {
             "status": "emergency_bypass",
             "answer": "I have detected that this may be an emergency. I am routing you immediately to a human doctor.",
@@ -31,7 +36,7 @@ async def query_twin(prompt: str):
         
     # 2. High-Purity Vector Search in Expert DNA Vault
     try:
-        query_vector = embedder.get_embedding(prompt)
+        query_vector = embedder.get_embedding(clean_prompt)
         # We search ONLY the expert-verified logic vault for production answers
         results = db.expert_vault_search(query_vector, limit=1)
         
@@ -48,13 +53,13 @@ async def query_twin(prompt: str):
         # 3. Confidence-Integrated Routing + Guardrail
         if confidence >= 0.85: # Slightly lower threshold but backed by Guardrail
             guard = GuardrailService()
-            is_covered = guard.verify_coverage(prompt, top_match["expert_decision"])
+            is_covered = guard.verify_coverage(clean_prompt, top_match["expert_decision"])
             
             if is_covered:
                 return {
                     "status": "autonomous",
-                    "answer": top_match["expert_decision"],
-                    "reasoning": top_match.get("reasoning", "Grounded in Expert DNA"),
+                    "answer": scrubber.restore(top_match["expert_decision"]),
+                    "reasoning": scrubber.restore(top_match.get("reasoning", "Grounded in Expert DNA")),
                     "confidence": confidence
                 }
             else:
@@ -69,7 +74,7 @@ async def query_twin(prompt: str):
             return {
                 "status": "human_in_the_loop",
                 "answer": "I have an expert-derived recommendation, but I'm requesting final verification from our team to be 100% sure.",
-                "draft": top_match["expert_decision"],
+                "draft": scrubber.restore(top_match["expert_decision"]),
                 "confidence": confidence
             }
         else:

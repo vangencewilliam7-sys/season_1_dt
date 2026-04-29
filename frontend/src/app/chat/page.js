@@ -1,10 +1,13 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Sidebar from '../../components/layout/Sidebar'
+import { getSupabaseClient, hasSupabaseConfig } from '../../lib/supabase'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
 
 export default function ChatPage() {
+  const router = useRouter()
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -21,6 +24,15 @@ export default function ChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  async function handleSignOut() {
+    if (hasSupabaseConfig) {
+      const supabase = getSupabaseClient()
+      await supabase.auth.signOut()
+    }
+
+    router.push('/auth/signin')
+  }
 
   async function sendMessage() {
     if (!input.trim() || loading) return
@@ -94,9 +106,24 @@ export default function ChatPage() {
               Expert: Fertility Specialist · Domain: Healthcare
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span className="badge badge-teal">RAG Active</span>
             <span className="badge badge-blue">HIPAA Mode</span>
+            <button
+              onClick={handleSignOut}
+              style={{
+                border: '1px solid var(--border)',
+                background: '#FFFFFF',
+                color: 'var(--text-secondary)',
+                borderRadius: '999px',
+                fontSize: 12,
+                fontWeight: 700,
+                padding: '8px 14px',
+                cursor: 'pointer',
+              }}
+            >
+              Sign Out
+            </button>
           </div>
         </div>
 
