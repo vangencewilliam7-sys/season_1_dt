@@ -1,65 +1,76 @@
 'use client'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { 
+  DashboardIcon, 
+  KnowledgeIcon, 
+  PersonaIcon, 
+  ChatIcon, 
+  GlassBoxIcon, 
+  SkillsIcon 
+} from '../ui/SparkleIcons'
 
 const NAV = [
-  { href: '/',               label: 'Dashboard',      icon: '◈' },
-  { href: '/knowledge-hub',  label: 'Knowledge Hub',  icon: '⬡' },
-  { href: '/persona',        label: 'Persona',        icon: '◎' },
-  { href: '/chat',           label: 'Twin Chat',      icon: '◇' },
-  { href: '/glass-box',      label: 'Glass Box',      icon: '🔍' },
-  { href: '/skills',         label: 'Skills',         icon: '◆' },
+  { href: '/',               label: 'Dashboard',      icon: <DashboardIcon /> },
+  { href: '/knowledge-hub',  label: 'Knowledge Hub',  icon: <KnowledgeIcon /> },
+  { href: '/persona',        label: 'Persona',        icon: <PersonaIcon /> },
+  { href: '/chat',           label: 'Twin Chat',      icon: <ChatIcon /> },
+  { href: '/glass-box',      label: 'Glass Box',      icon: <GlassBoxIcon /> },
+  { href: '/skills',         label: 'Skills',         icon: <SkillsIcon /> },
 ]
 
 export default function Sidebar({ active }) {
   return (
     <aside style={{
-      width: 220,
+      width: 240,
       minHeight: '100vh',
-      background: 'var(--bg-surface)',
-      borderRight: '1px solid var(--border)',
+      background: '#FFFFFF',
+      borderRight: '1px solid #E2E8F0',
       display: 'flex',
       flexDirection: 'column',
       padding: '24px 0',
       flexShrink: 0,
     }}>
       {/* Logo */}
-      <div style={{ padding: '0 20px 28px' }}>
+      <div style={{ padding: '0 20px 32px' }}>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '10px 14px',
-          background: 'var(--accent-glow)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--accent-primary)30',
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '14px 16px',
+          background: 'linear-gradient(135deg, #03045E 0%, #0077B6 100%)',
+          borderRadius: '12px',
+          boxShadow: '0 4px 16px rgba(3,4,94,0.15)',
         }}>
-          <span style={{ fontSize: 22 }}>⚕</span>
+          <span style={{ fontSize: 22, filter: 'brightness(10)' }}>⚕</span>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>Doctor Twin</div>
-            <div style={{ fontSize: 10, color: 'var(--accent-primary)', fontWeight: 600 }}>SEASON 1 · DT</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>Doctor Twin</div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: 600, letterSpacing: '0.5px' }}>SEASON 1 · DT</div>
           </div>
         </div>
       </div>
 
       {/* Nav */}
       <nav style={{ flex: 1, padding: '0 12px' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', padding: '0 12px 8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          Navigation
+        </div>
         {NAV.map(item => {
           const isActive = active === item.href
           return (
             <Link key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 12px',
-                borderRadius: 'var(--radius-sm)',
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 14px',
+                borderRadius: '8px',
                 marginBottom: 4,
-                color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                background: isActive ? 'var(--accent-glow)' : 'transparent',
-                border: isActive ? '1px solid var(--accent-primary)30' : '1px solid transparent',
-                fontWeight: isActive ? 600 : 400,
-                fontSize: 13,
+                color: isActive ? '#0077B6' : '#475569',
+                background: isActive ? '#CAF0F8' : 'transparent',
+                fontWeight: isActive ? 600 : 500,
+                fontSize: 14,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
               }}>
-                <span style={{ fontSize: 15 }}>{item.icon}</span>
+                <span style={{ display: 'flex', alignItems: 'center', opacity: isActive ? 1 : 0.6 }}>
+                  {item.icon}
+                </span>
                 {item.label}
               </div>
             </Link>
@@ -68,15 +79,14 @@ export default function Sidebar({ active }) {
       </nav>
 
       {/* Status dot */}
-      <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+      <div style={{ padding: '16px 20px', borderTop: '1px solid #E2E8F0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#64748B' }}>
           <span style={{
             width: 7, height: 7, borderRadius: '50%',
-            background: 'var(--accent-green)',
-            animation: 'blink 2s ease infinite',
+            background: '#00B4D8',
             display: 'inline-block',
           }}/>
-          Backend running
+          Core DT System Active
         </div>
       </div>
     </aside>

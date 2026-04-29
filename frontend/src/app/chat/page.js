@@ -78,24 +78,25 @@ export default function ChatPage() {
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar active="/chat" />
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-base)' }}>
 
         {/* Header */}
         <div style={{
           padding: '20px 28px',
           borderBottom: '1px solid var(--border)',
-          background: 'var(--bg-surface)',
+          background: '#FFFFFF',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
         }}>
           <div>
-            <h1 style={{ fontSize: 18, fontWeight: 700 }}>Twin Chat</h1>
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Twin Chat</h1>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
               Expert: Fertility Specialist · Domain: Healthcare
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <span className="badge badge-blue">RAG Active</span>
-            <span className="badge badge-teal">HIPAA Mode</span>
+            <span className="badge badge-teal">RAG Active</span>
+            <span className="badge badge-blue">HIPAA Mode</span>
           </div>
         </div>
 
@@ -109,23 +110,25 @@ export default function ChatPage() {
             }}>
               {/* Avatar */}
               <div style={{
-                width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
-                background: msg.role === 'user' ? 'var(--accent-glow)' : '#14b8a615',
-                border: `1px solid ${msg.role === 'user' ? 'var(--accent-primary)' : 'var(--accent-teal)'}30`,
+                width: 38, height: 38, borderRadius: 'var(--radius-sm)', flexShrink: 0,
+                background: msg.role === 'user' ? '#EFF6FF' : '#F0FDFA',
+                border: `2px solid ${msg.role === 'user' ? '#BFDBFE' : '#99F6E4'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 14,
+                fontSize: 16,
               }}>
-                {msg.role === 'user' ? '◈' : '⚕'}
+                {msg.role === 'user' ? '👤' : '⚕️'}
               </div>
 
               {/* Bubble */}
               <div style={{ maxWidth: '68%' }}>
                 <div style={{
-                  padding: '12px 16px',
-                  borderRadius: msg.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
-                  background: msg.role === 'user' ? 'var(--accent-glow)' : 'var(--bg-card)',
-                  border: `1px solid ${msg.role === 'user' ? 'var(--accent-primary)' : 'var(--border)'}30`,
+                  padding: '14px 18px',
+                  borderRadius: msg.role === 'user' ? '18px 4px 18px 18px' : '4px 18px 18px 18px',
+                  background: msg.role === 'user' ? 'linear-gradient(135deg, #0D9488, #14B8A6)' : '#FFFFFF',
+                  border: msg.role === 'user' ? 'none' : '1px solid var(--border)',
+                  color: msg.role === 'user' ? '#FFFFFF' : 'var(--text-primary)',
                   fontSize: 14, lineHeight: 1.65,
+                  boxShadow: msg.role === 'user' ? '0 4px 12px rgba(13,148,136,0.2)' : 'var(--shadow-card)',
                 }}>
                   {msg.content}
                 </div>
@@ -157,19 +160,20 @@ export default function ChatPage() {
           {loading && (
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <div style={{
-                width: 34, height: 34, borderRadius: '50%',
-                background: '#14b8a615', border: '1px solid var(--accent-teal)30',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
-              }}>⚕</div>
+                width: 38, height: 38, borderRadius: 'var(--radius-sm)',
+                background: '#F0FDFA', border: '2px solid #99F6E4',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+              }}>⚕️</div>
               <div style={{
-                padding: '12px 20px', borderRadius: '4px 16px 16px 16px',
-                background: 'var(--bg-card)', border: '1px solid var(--border)',
-                display: 'flex', gap: 4, alignItems: 'center',
+                padding: '14px 22px', borderRadius: '4px 18px 18px 18px',
+                background: '#FFFFFF', border: '1px solid var(--border)',
+                display: 'flex', gap: 5, alignItems: 'center',
+                boxShadow: 'var(--shadow-card)',
               }}>
                 {[0,1,2].map(d => (
                   <span key={d} style={{
-                    width: 7, height: 7, borderRadius: '50%',
-                    background: 'var(--accent-teal)',
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: 'var(--accent-primary)',
                     animation: `blink 1.2s ease ${d * 0.2}s infinite`,
                     display: 'inline-block',
                   }}/>
@@ -184,7 +188,7 @@ export default function ChatPage() {
         <div style={{
           padding: '16px 28px',
           borderTop: '1px solid var(--border)',
-          background: 'var(--bg-surface)',
+          background: '#FFFFFF',
         }}>
           <div style={{ display: 'flex', gap: 10 }}>
             <input
@@ -193,26 +197,28 @@ export default function ChatPage() {
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
               placeholder="Ask the Doctor Twin a clinical question..."
               style={{
-                flex: 1, padding: '12px 16px',
-                background: 'var(--bg-card)',
+                flex: 1, padding: '13px 18px',
+                background: 'var(--bg-elevated)',
                 border: '1px solid var(--border)',
                 borderRadius: 'var(--radius-md)',
                 color: 'var(--text-primary)',
                 fontSize: 14, outline: 'none',
+                transition: 'border-color 0.2s',
               }}
             />
             <button
               onClick={sendMessage}
               disabled={loading || !input.trim()}
               style={{
-                padding: '12px 22px',
-                background: loading ? 'var(--bg-elevated)' : 'var(--accent-primary)',
-                color: 'white',
+                padding: '13px 24px',
+                background: loading ? 'var(--bg-elevated)' : 'linear-gradient(135deg, #0D9488, #14B8A6)',
+                color: loading ? 'var(--text-secondary)' : 'white',
                 border: 'none',
                 borderRadius: 'var(--radius-md)',
-                fontWeight: 600, fontSize: 13,
+                fontWeight: 600, fontSize: 14,
                 cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s',
+                boxShadow: loading ? 'none' : '0 4px 12px rgba(13,148,136,0.25)',
               }}
             >
               {loading ? '...' : 'Send'}

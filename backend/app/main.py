@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from .api import ingest, query, chat
+import os
 
 app = FastAPI(title="Knowledge Hub - Standalone Brain Factory")
 
@@ -17,6 +19,11 @@ app.add_middleware(
 app.include_router(ingest.router, prefix="/api", tags=["Ingestion"])
 app.include_router(query.router, prefix="/api", tags=["Query"])
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
+
+# Mount uploads directory for static file serving (document viewer)
+uploads_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads"))
+os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 @app.get("/")
 async def root():
