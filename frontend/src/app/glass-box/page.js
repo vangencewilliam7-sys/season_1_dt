@@ -11,7 +11,7 @@ export default function GlassBoxPage() {
   }, [])
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC', fontFamily: 'var(--font-sans), Inter, system-ui, sans-serif' }}>
       <Sidebar active="/glass-box" />
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -19,21 +19,19 @@ export default function GlassBoxPage() {
         {/* Header */}
         <div style={{
           padding: '24px 32px',
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--bg-surface)',
+          borderBottom: '1px solid #E2E8F0',
+          background: '#FFFFFF',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 20 }}>🔍</span> Glass Box Execution Trace
-            </h1>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0F172A' }}>Execution Tree Hierarchy</h1>
+            <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
               Transparent node-by-node audit log of the Digital Twin's clinical reasoning.
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <span className="badge badge-teal">Node Tracer Active</span>
-            <span className="badge badge-purple">{traces.length} Sessions Logged</span>
+            <span className="badge badge-teal">Hierarchy Map Active</span>
+            <span className="badge badge-purple">{traces.length} Logs</span>
           </div>
         </div>
 
@@ -42,112 +40,161 @@ export default function GlassBoxPage() {
           {traces.length === 0 ? (
             <div style={{
               textAlign: 'center', padding: '60px 20px',
-              border: '1px dashed var(--border)', borderRadius: 'var(--radius-lg)',
-              color: 'var(--text-secondary)'
+              border: '1px dashed #E2E8F0', borderRadius: '16px',
+              color: '#64748B', background: '#FFFFFF', boxShadow: '0 4px 20px rgba(0,0,0,0.02)'
             }}>
-              <div style={{ fontSize: 40, opacity: 0.5, marginBottom: 16 }}>🕸️</div>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>No Traces Yet</h3>
-              <p style={{ fontSize: 13 }}>Go to Twin Chat and ask a question to generate a nodal reasoning trace.</p>
+              <div style={{ fontSize: 40, opacity: 0.5, marginBottom: 16 }}>🌿</div>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#0F172A', marginBottom: 8 }}>No Execution Paths Logged</h3>
+              <p style={{ fontSize: 13 }}>Send a message in the Twin Chat to inspect the logic node graph.</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {traces.map((trace) => (
-                <div key={trace.id} className="fade-up" style={{
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-lg)',
-                  overflow: 'hidden',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
-                }}>
-                  {/* Header Row */}
-                  <div style={{
-                    padding: '16px 20px',
-                    background: 'var(--bg-surface)',
-                    borderBottom: '1px solid var(--border)',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
+              {traces.map((trace) => {
+                const hasMatch = trace.sources && trace.sources.length > 0;
+
+                return (
+                  <div key={trace.id} className="fade-up" style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '20px',
+                    padding: '32px',
+                    boxShadow: '0 4px 24px rgba(15, 23, 42, 0.04)',
+                    overflowX: 'auto'
                   }}>
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                      <span className="badge badge-blue">ID: {trace.id.toUpperCase()}</span>
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                        {new Date(trace.timestamp).toLocaleTimeString()}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <span className="badge badge-green">{trace.latency}ms Latency</span>
-                      <span className="badge badge-amber">{Math.round(trace.confidence * 100)}% Match</span>
-                    </div>
-                  </div>
-
-                  {/* Nodes Wrapper */}
-                  <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-                    
-                    {/* Node 1: Input */}
-                    <div style={{ display: 'flex', gap: 16 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--accent-blue)20', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>1</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Trigger (User Query)</div>
-                        <div style={{ fontSize: 15, padding: 12, background: 'var(--bg-base)', borderRadius: 6, border: '1px solid var(--border)' }}>
-                          {trace.query}
-                        </div>
+                    {/* Trace Metadata */}
+                    <div style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      borderBottom: '1px solid #F1F5F9', paddingBottom: '20px', marginBottom: '40px'
+                    }}>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                        <span style={{ background: '#EFF6FF', color: '#3B82F6', padding: '4px 12px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>ID: {trace.id.toUpperCase()}</span>
+                        <span style={{ fontSize: 13, color: '#94A3B8' }}>{new Date(trace.timestamp).toLocaleTimeString()}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        <span style={{ background: '#F0FDFA', color: '#16A34A', padding: '4px 12px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>{trace.latency}MS LATENCY</span>
+                        <span style={{ background: '#FFFBEB', color: '#D97706', padding: '4px 12px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>{Math.round((trace.confidence || 0) * 100)}% MATCH</span>
                       </div>
                     </div>
 
-                    {/* Path Line */}
-                    <div style={{ width: 2, height: 20, background: 'var(--border)', marginLeft: 19 }} />
-
-                    {/* Node 2: Retrieval */}
-                    <div style={{ display: 'flex', gap: 16 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--accent-green)20', color: 'var(--accent-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>2</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Retrieval (Logic Vault)</div>
-                        <div style={{ fontSize: 13, padding: 12, background: 'var(--bg-base)', borderRadius: 6, border: '1px solid var(--border)' }}>
-                          {trace.sources && trace.sources.length > 0 ? (
-                            <ul style={{ paddingLeft: 20, margin: 0, color: 'var(--accent-green)' }}>
-                              {trace.sources.map((s, i) => <li key={i}>{s}</li>)}
-                            </ul>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>No Master Cases matched the similarity threshold.</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Path Line */}
-                    <div style={{ width: 2, height: 20, background: 'var(--border)', marginLeft: 19 }} />
-
-                    {/* Node 3: Rationale */}
-                    <div style={{ display: 'flex', gap: 16 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--accent-purple)20', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>3</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Reasoning Engine (Chain of Thought)</div>
+                    {/* ── SIDEWAYS HIERARCHY GRAPH (LEFT-TO-RIGHT) ── */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 0, minWidth: '1500px', padding: '20px 0' }}>
+                      
+                      {/* COLUMN 1: TRIGGER NODE */}
+                      <div style={{
+                        background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px',
+                        padding: '16px 20px', width: '220px', minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)', position: 'relative'
+                      }}>
+                        <div style={{ fontSize: 13, color: '#0F172A', fontWeight: 700, marginBottom: 8 }}>Trigger Query</div>
                         <div style={{ 
-                          fontSize: 13, padding: 16, background: 'var(--bg-base)', 
-                          borderRadius: 6, border: '1px solid var(--accent-purple)50',
-                          borderLeft: '4px solid var(--accent-purple)',
-                          fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.6
+                          fontSize: 13, color: '#475569', fontWeight: 500,
+                          background: '#F8FAFC', padding: '12px', borderRadius: '8px', 
+                          border: '1px solid #E2E8F0', lineHeight: 1.4
+                        }}>
+                          "{trace.query}"
+                        </div>
+                      </div>
+
+                      {/* SVG CONNECTOR 1 */}
+                      <svg width="60" height="240" style={{ display: 'block', overflow: 'visible' }}>
+                        <circle cx="2" cy="120" r="4" fill="#FFFFFF" stroke="#475569" strokeWidth="2" />
+                        <path d="M 6 120 L 16 120 C 30 120, 30 60, 44 60 L 54 60" stroke="#475569" strokeWidth="2" fill="none" />
+                        <path d="M 6 120 L 16 120 C 30 120, 30 180, 44 180 L 54 180" stroke="#475569" strokeWidth="2" fill="none" />
+                        <circle cx="56" cy="60" r="4" fill="#FFFFFF" stroke="#475569" strokeWidth="2" />
+                        <circle cx="56" cy="180" r="4" fill="#FFFFFF" stroke="#475569" strokeWidth="2" />
+                      </svg>
+
+                      {/* COLUMN 2: RETRIEVAL FORKS */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 40, width: '240px' }}>
+                        {/* TOP FORK: VERIFIED CASES */}
+                        <div style={{
+                          background: '#FFFFFF', border: '1px solid #E2E8F0',
+                          borderRadius: '12px', padding: '14px 18px', minHeight: '100px',
+                          opacity: hasMatch ? 1 : 0.4, transition: 'all 0.3s', display: 'flex', flexDirection: 'column', justifyContent: 'center'
+                        }}>
+                          <div style={{ fontSize: 13, color: '#10B981', fontWeight: 700, marginBottom: 8 }}>Logic Vault Match</div>
+                          <div style={{ 
+                            fontSize: 13, color: '#475569', fontWeight: 500,
+                            background: '#F8FAFC', padding: '10px', borderRadius: '8px', 
+                            border: '1px solid #E2E8F0'
+                          }}>
+                            {hasMatch ? (
+                              <ul style={{ margin: 0, paddingLeft: 12, listStyle: 'circle' }}>
+                                {trace.sources.map((s, idx) => <li key={idx}>{s}</li>)}
+                              </ul>
+                            ) : "Similarity check failed."}
+                          </div>
+                        </div>
+
+                        {/* BOTTOM FORK: FALLBACK MODE */}
+                        <div style={{
+                          background: '#FFFFFF', border: '1px solid #E2E8F0',
+                          borderRadius: '12px', padding: '14px 18px', minHeight: '100px',
+                          opacity: !hasMatch ? 1 : 0.4, transition: 'all 0.3s', display: 'flex', flexDirection: 'column', justifyContent: 'center'
+                        }}>
+                          <div style={{ fontSize: 13, color: '#F59E0B', fontWeight: 700, marginBottom: 8 }}>Fallback Mode</div>
+                          <div style={{ 
+                            fontSize: 13, color: '#475569', fontWeight: 500,
+                            background: '#F8FAFC', padding: '10px', borderRadius: '8px', 
+                            border: '1px solid #E2E8F0'
+                          }}>
+                            {!hasMatch ? "Declining clinical authority. Guardrail path." : "Retrieval safe."}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SVG CONNECTOR 2 */}
+                      <svg width="60" height="240" style={{ display: 'block', overflow: 'visible' }}>
+                        <circle cx="4" cy="60" r="4" fill="#FFFFFF" stroke="#475569" strokeWidth="2" />
+                        <circle cx="4" cy="180" r="4" fill="#FFFFFF" stroke="#475569" strokeWidth="2" />
+                        <path d="M 8 60 L 18 60 C 30 60, 30 120, 44 120 L 54 120" stroke="#475569" strokeWidth="2" fill="none" />
+                        <path d="M 8 180 L 18 180 C 30 180, 30 120, 44 120 L 54 120" stroke="#475569" strokeWidth="2" fill="none" />
+                        <circle cx="56" cy="120" r="4" fill="#FFFFFF" stroke="#475569" strokeWidth="2" />
+                      </svg>
+
+                      {/* COLUMN 3: REASONING ENGINE */}
+                      <div style={{
+                        background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px',
+                        padding: '16px 20px', width: '280px', minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)'
+                      }}>
+                        <div style={{ fontSize: 13, color: '#0F172A', fontWeight: 700, marginBottom: 8 }}>Chain of Thought</div>
+                        <div style={{ 
+                          fontSize: 13, color: '#475569', fontWeight: 500,
+                          background: '#F8FAFC', padding: '12px', borderRadius: '8px', 
+                          border: '1px solid #E2E8F0', maxHeight: '180px', overflowY: 'auto'
                         }}>
                           {trace.rationale}
                         </div>
                       </div>
-                    </div>
 
-                    {/* Path Line */}
-                    <div style={{ width: 2, height: 20, background: 'var(--border)', marginLeft: 19 }} />
+                      {/* SVG CONNECTOR 3 */}
+                      <svg width="60" height="240" style={{ display: 'block', overflow: 'visible' }}>
+                        <circle cx="4" cy="120" r="4" fill="#FFFFFF" stroke="#475569" strokeWidth="2" />
+                        <line x1="8" y1="120" x2="52" y2="120" stroke="#475569" strokeWidth="2" />
+                        <circle cx="56" cy="120" r="4" fill="#FFFFFF" stroke="#475569" strokeWidth="2" />
+                      </svg>
 
-                    {/* Node 4: Generation */}
-                    <div style={{ display: 'flex', gap: 16 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--accent-orange)20', color: 'var(--accent-orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>4</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Generation (Final Persona Synthesis)</div>
-                        <div style={{ fontSize: 14, padding: 16, background: 'var(--bg-base)', borderRadius: 6, border: '1px solid var(--accent-orange)50', lineHeight: 1.6 }}>
-                          {trace.response}
+                      {/* COLUMN 4: GENERATION */}
+                      <div style={{
+                        background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px',
+                        padding: '24px', width: '750px', minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)'
+                      }}>
+                        <div style={{ fontSize: 13, color: '#0F172A', fontWeight: 700, marginBottom: 8 }}>Final Output</div>
+                        <div style={{ 
+                          fontSize: 13, fontWeight: 500, color: '#475569', lineHeight: 1.5,
+                          background: '#F8FAFC', padding: '16px', borderRadius: '8px', 
+                          border: '1px solid #E2E8F0', maxHeight: '350px', overflowY: 'auto'
+                        }}>
+                          "{trace.response}"
                         </div>
                       </div>
-                    </div>
 
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

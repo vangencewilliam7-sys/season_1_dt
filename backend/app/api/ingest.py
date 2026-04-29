@@ -120,3 +120,25 @@ async def commit_to_vault(scenario_id: str, expert_decision: str, archetype: str
     db.insert_expert_dna(data)
     
     return {"status": "committed", "message": "Expert DNA added to production Logic Vault."}
+
+@router.get("/file-info/{document_id}")
+async def get_file_info(document_id: str):
+    """Returns the filename and URL for an uploaded document so the frontend can embed a viewer."""
+    upload_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "uploads"))
+    
+    if not os.path.exists(upload_dir):
+        raise HTTPException(status_code=404, detail="Uploads directory not found.")
+    
+    # Files are stored as {document_id}_{original_filename}
+    for fname in os.listdir(upload_dir):
+        if fname.startswith(document_id):
+            original_name = fname[len(document_id) + 1:]  # strip uuid_ prefix
+            file_ext = os.path.splitext(fname)[1].lower()
+            return {
+                "filename": original_name,
+                "stored_name": fname,
+                "file_url": f"http://localhost:8000/uploads/{fname}",
+                "file_type": "docx" if file_ext == ".docx" else "pdf" if file_ext == ".pdf" else "unknown"
+            }
+    
+    raise HTTPException(status_code=404, detail="File not found for this document ID.")
