@@ -11,6 +11,7 @@ export default function KnowledgeHubPage() {
   const [scenarios, setScenarios] = useState([])
   const [isFetchingState, setIsFetchingState] = useState(false)
   const [expertDecision, setExpertDecision] = useState('')
+  const [extractedCases, setExtractedCases] = useState([])
 
   // Load state from localStorage on mount
   useEffect(() => {
@@ -79,7 +80,7 @@ export default function KnowledgeHubPage() {
         formData.append('file', files[i].file)
 
         try {
-          const res = await fetch('http://localhost:8000/api/ingest', {
+          const res = await fetch('http://127.0.0.1:8000/api/ingest', {
             method: 'POST',
             body: formData,
           })
@@ -116,12 +117,14 @@ export default function KnowledgeHubPage() {
     setIsFetchingState(true)
     setScenarios([])
     setExpertDecision('')
+    setExtractedCases([])
     
     try {
-      const res = await fetch(`http://localhost:8000/api/state/${file.document_id}`)
+      const res = await fetch(`http://127.0.0.1:8000/api/state/${file.document_id}`)
       if (!res.ok) throw new Error("Failed to fetch LangGraph state")
       const data = await res.json()
       setScenarios(data.synthetic_scenarios || [])
+      setExtractedCases(data.parsed_cases || [])
     } catch (e) {
       console.error(e)
       alert("Failed to load synthetic scenarios.")
@@ -136,7 +139,7 @@ export default function KnowledgeHubPage() {
     }
 
     try {
-      const res = await fetch(`http://localhost:8000/api/commit?scenario_id=${scenario_id}&expert_decision=${encodeURIComponent(expertDecision)}&archetype=Safety`, {
+      const res = await fetch(`http://127.0.0.1:8000/api/commit?scenario_id=${scenario_id}&expert_decision=${encodeURIComponent(expertDecision)}&archetype=Safety`, {
         method: 'POST'
       })
       if (!res.ok) throw new Error("Commit failed")
@@ -308,6 +311,36 @@ export default function KnowledgeHubPage() {
                   <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>No scenarios found in state.</div>
                 ) : (
                   <div>
+                    {/* Automatically Extracted Cases Section */}
+                    {extractedCases.length > 0 && (
+                      <div style={{ marginBottom: 32 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                          <h4 style={{ fontSize: 16, fontWeight: 600 }}>Automatically Extracted Logic</h4>
+                          <span className="badge badge-teal">Verified grounding</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          {extractedCases.map((c, i) => (
+                            <div key={i} style={{ 
+                              background: 'var(--bg-elevated)', border: '1px solid var(--border)', 
+                              padding: 16, borderRadius: 'var(--radius-md)' 
+                            }}>
+                              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4, color: 'var(--accent-teal)' }}>
+                                Expert Rule: {c.expert_decision}
+                              </div>
+                              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                                <strong>Logic:</strong> {c.chain_of_thought.join(' → ')}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <h4 style={{ fontSize: 16, fontWeight: 600 }}>Synthetic Scenarios (HITL)</h4>
+                      <span className="badge badge-amber">Action required</span>
+                    </div>
+
                     {scenarios.map((scene, idx) => (
                       <div key={idx} style={{ background: 'var(--bg-elevated)', padding: 20, borderRadius: 'var(--radius-md)', marginBottom: 24, border: '1px solid var(--border)' }}>
                         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-orange)', marginBottom: 8 }}>SCENARIO {idx + 1}</div>

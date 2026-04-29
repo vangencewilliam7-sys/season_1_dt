@@ -47,3 +47,14 @@ class SupabaseService:
         if not self.client: return
         return self.client.table("chat_audit_logs").insert(data).execute()
 
+    def get_count(self, table: str) -> int:
+        """Returns the total row count for a given table."""
+        if not self.client: return 0
+        try:
+            # We use a select with head=True to just get the count
+            response = self.client.table(table).select("*", count="exact").limit(0).execute()
+            return response.count if response.count is not None else 0
+        except Exception as e:
+            print(f"Error fetching count for {table}: {e}")
+            return 0
+

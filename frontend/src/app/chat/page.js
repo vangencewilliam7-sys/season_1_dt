@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Sidebar from '../../components/layout/Sidebar'
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([

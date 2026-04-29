@@ -38,13 +38,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // Backend health check
-    fetch('http://localhost:8000/health')
+    fetch('http://127.0.0.1:8000/health')
       .then(r => r.json())
       .then(setHealth)
       .catch(() => setHealth({ status: 'offline' }))
 
-    // Real DB stats via Prisma → Supabase
-    fetch('/api/stats?expertId=demo')
+    // Real DB stats via Python Backend → Supabase
+    fetch('http://127.0.0.1:8000/api/stats')
       .then(r => r.json())
       .then(setStats)
       .catch(() => setStats(null))

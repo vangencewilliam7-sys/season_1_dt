@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from ..services.embeddings import EmbeddingService
 from ..services.supabase_client import SupabaseService
 from ..services.bypass import BypassService
+from ..services.guardrail_service import GuardrailService
 
 router = APIRouter()
 
@@ -44,15 +45,26 @@ async def query_twin(prompt: str):
         top_match = results[0]
         confidence = top_match.get("similarity", 0)
         
-        # 3. Confidence-Integrated Routing
-        if confidence >= 0.90:
-            return {
-                "status": "autonomous",
-                "answer": top_match["expert_decision"],
-                "reasoning": top_match.get("reasoning", "Grounded in Expert DNA"),
-                "confidence": confidence
-            }
-        elif confidence >= 0.75:
+        # 3. Confidence-Integrated Routing + Guardrail
+        if confidence >= 0.85: # Slightly lower threshold but backed by Guardrail
+            guard = GuardrailService()
+            is_covered = guard.verify_coverage(prompt, top_match["expert_decision"])
+            
+            if is_covered:
+                return {
+                    "status": "autonomous",
+                    "answer": top_match["expert_decision"],
+                    "reasoning": top_match.get("reasoning", "Grounded in Expert DNA"),
+                    "confidence": confidence
+                }
+            else:
+                return {
+                    "status": "out_of_bounds",
+                    "answer": "I have identified related knowledge, but it does not specifically cover your query. I have flagged this gap for the doctor to resolve.",
+                    "confidence": confidence,
+                    "reasoning": "Guardrail detected lack of explicit entailment."
+                }
+        elif confidence >= 0.70:
             # High similarity but not exact - draft for review
             return {
                 "status": "human_in_the_loop",

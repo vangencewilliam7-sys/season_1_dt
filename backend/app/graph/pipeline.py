@@ -6,6 +6,7 @@ from .nodes.slm_filter import slm_filter_node
 from .nodes.socratic import socratic_node
 from .nodes.parser import parser_node
 from .nodes.audit import audit_node
+from .nodes.logic_extraction import logic_extraction_node
 
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -22,10 +23,12 @@ def create_pipeline():
     workflow.add_node("socratic", socratic_node) # Interrupt happens here
     workflow.add_node("parser", parser_node)
     workflow.add_node("audit", audit_node)
+    workflow.add_node("logic_extraction", logic_extraction_node)
 
     # Define Edges
     workflow.set_entry_point("ingestion")
-    workflow.add_edge("ingestion", "divergence")
+    workflow.add_edge("ingestion", "logic_extraction")
+    workflow.add_edge("logic_extraction", "divergence")
     workflow.add_edge("divergence", "slm_filter")
     
     # Conditional edge from slm_filter (retry if hallucination)
