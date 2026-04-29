@@ -30,8 +30,9 @@ def test_ingest_payload_validation():
     with open(dummy_path, "w") as f:
         f.write("test content")
     
-    files = {'file': ('test.txt', open(dummy_path, 'rb'))}
-    response = httpx.post(f"{BASE_URL}/ingest", files=files)
+    with open(dummy_path, "rb") as f:
+        files = {'file': ('test.txt', f)}
+        response = httpx.post(f"{BASE_URL}/ingest", files=files)
     
     # Assert rejection
     assert response.status_code == 400
