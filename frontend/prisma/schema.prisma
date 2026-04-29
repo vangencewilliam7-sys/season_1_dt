@@ -29,7 +29,7 @@ datasource db {
 model DocumentChunk {
   id               String   @id @default(uuid())
   documentId       String   @map("document_id")
-  expertId         String   @map("expert_id")
+  expertId         String?  @default("demo") @map("expert_id")
 
   content          String
   level            Int                           // 1=H1, 2=H2, 3=H3, 99=body

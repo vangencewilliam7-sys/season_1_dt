@@ -1,6 +1,8 @@
 'use client'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '../../lib/supabase'
 
 const NAV = [
   { href: '/',               label: 'Dashboard',      icon: '◈' },
@@ -12,6 +14,20 @@ const NAV = [
 ]
 
 export default function Sidebar({ active }) {
+  const router = useRouter()
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user)
+    })
+  }, [])
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/auth/signin')
+  }
+
   return (
     <aside style={{
       width: 220,
@@ -67,8 +83,37 @@ export default function Sidebar({ active }) {
         })}
       </nav>
 
-      {/* Status dot */}
-      <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)' }}>
+      {/* Status & Profile */}
+      <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        
+        {/* Profile Card */}
+        {user && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: 'var(--bg-elevated)', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-primary)', color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 'bold'
+              }}>
+                {user?.user_metadata?.full_name?.[0]?.toUpperCase() || 'D'}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                  {user?.user_metadata?.full_name || 'Doctor'}
+                </span>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Logged in</span>
+              </div>
+            </div>
+            <button onClick={handleSignOut} title="Sign Out" style={{
+              background: 'transparent', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', fontSize: 14, padding: 4
+            }}>
+              ⏻
+            </button>
+          </div>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
           <span style={{
             width: 7, height: 7, borderRadius: '50%',

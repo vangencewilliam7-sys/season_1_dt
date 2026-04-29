@@ -1,6 +1,8 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Sidebar from '../../components/layout/Sidebar'
+import { supabase } from '../../lib/supabase'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -17,6 +19,12 @@ export default function ChatPage() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/auth/signin')
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -93,9 +101,22 @@ export default function ChatPage() {
               Expert: Fertility Specialist · Domain: Healthcare
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span className="badge badge-blue">RAG Active</span>
             <span className="badge badge-teal">HIPAA Mode</span>
+            <button 
+              onClick={handleSignOut} 
+              style={{
+                marginLeft: 12, padding: '6px 12px', background: 'transparent', 
+                border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', 
+                color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12,
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.color = 'var(--accent-red)'; e.currentTarget.style.borderColor = 'var(--accent-red)' }}
+              onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+            >
+              Sign Out
+            </button>
           </div>
         </div>
 
