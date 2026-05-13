@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 import os
 import shutil
 import uuid
@@ -6,6 +6,7 @@ import hashlib
 from ..graph.pipeline import create_pipeline
 from ..models.state import GraphState
 from ..services.pii_scrubber import PIIScrubber
+from ..adapters import get_adapter, VALID_DOMAINS, VALID_ROLES
 
 router = APIRouter()
 
@@ -45,7 +46,11 @@ def _rebuild_hash_registry(upload_dir: str):
                 pass
 
 @router.post("/ingest")
-async def ingest_file(file: UploadFile = File(...)):
+async def ingest_file(
+    file: UploadFile = File(...),
+    domain: str = Query(..., enum=VALID_DOMAINS, description="Domain for this twin: healthcare | it | education"),
+    role:   str = Query(..., enum=VALID_ROLES,   description="Role for this twin: doctor | project_manager | tutor"),
+):
     if not file.filename.endswith(('.docx', '.pdf')):
         raise HTTPException(status_code=400, detail="Only .docx and .pdf files are supported.")
     
@@ -71,6 +76,12 @@ async def ingest_file(file: UploadFile = File(...)):
         os.remove(file_path)
         existing_doc_id = existing["document_id"]
         
+        # Resolve adapter so we can inject domain context even when restoring state
+        try:
+            adapter = get_adapter(domain, role)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
         # Find the original file on disk to re-run the pipeline (state is in-memory and may be lost on restart)
         original_path = None
         for fname in os.listdir(upload_dir):
@@ -82,7 +93,13 @@ async def ingest_file(file: UploadFile = File(...)):
             # Re-run the pipeline to restore in-memory state (no new chunks created — chunks already exist in Supabase)
             import asyncio
             pipeline = create_pipeline()
-            initial_state = GraphState(document_id=existing_doc_id, source_path=original_path)
+            initial_state = GraphState(
+                document_id=existing_doc_id, 
+                source_path=original_path,
+                domain_id=adapter.get_domain_id(),
+                role_id=adapter.get_role_id(),
+                adapter_context=adapter.to_context_dict(),
+            )
             try:
                 await asyncio.wait_for(
                     asyncio.to_thread(pipeline.invoke, initial_state, {"configurable": {"thread_id": existing_doc_id}}),
@@ -95,7 +112,9 @@ async def ingest_file(file: UploadFile = File(...)):
                 "document_id": existing_doc_id,
                 "file_path": original_path,
                 "pipeline_status": "restored_from_duplicate",
-                "is_duplicate": True
+                "is_duplicate": True,
+                "domain": adapter.get_domain_name(),
+                "role": adapter.get_role_name(),
             }
         else:
             raise HTTPException(status_code=409, detail="Document was previously uploaded but the file is missing on disk. Please contact support.")
@@ -103,19 +122,29 @@ async def ingest_file(file: UploadFile = File(...)):
     # Register this file hash
     _upload_hash_registry[file_hash] = {"document_id": file_id, "filename": file.filename}
 
-    # Trigger LangGraph Pipeline — pass file_path via state so the ingestion node doesn't hardcode
+    # Resolve domain adapter and inject domain identity into GraphState
     import asyncio
-    
+    try:
+        adapter = get_adapter(domain, role)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     pipeline = create_pipeline()
-    initial_state = GraphState(document_id=file_id, source_path=file_path)
-    
+    initial_state = GraphState(
+        document_id=file_id,
+        source_path=file_path,
+        domain_id=adapter.get_domain_id(),
+        role_id=adapter.get_role_id(),
+        adapter_context=adapter.to_context_dict(),
+    )
+
     try:
         # Run synchronous pipeline.invoke in a threadpool so it doesn't block FastAPI
         # Increased timeout to 5 minutes (300 seconds) because heavy OpenAI processing takes time
         result = await asyncio.wait_for(
             asyncio.to_thread(
-                pipeline.invoke, 
-                initial_state, 
+                pipeline.invoke,
+                initial_state,
                 {"configurable": {"thread_id": file_id}}
             ),
             timeout=300.0
@@ -124,6 +153,8 @@ async def ingest_file(file: UploadFile = File(...)):
             "message": "Ingestion started and processed up to HITL breakpoint",
             "document_id": file_id,
             "file_path": file_path,
+            "domain": adapter.get_domain_name(),
+            "role": adapter.get_role_name(),
             "pipeline_status": "paused_at_socratic_node"
         }
     except Exception as e:
@@ -176,32 +207,53 @@ async def resolve_scenario(document_id: str, scenario_id: str, audio: UploadFile
         "transcript": transcript
     }
 @router.post("/commit")
-async def commit_to_vault(scenario_id: str, expert_decision: str, archetype: str, industry: str = "fertility"):
-    """Moves verified logic from the pipeline into the production Logic Vault."""
+async def commit_to_vault(
+    scenario_id:     str,
+    expert_decision: str,
+    archetype:       str,
+    domain:          str = Query(..., enum=VALID_DOMAINS, description="Domain this decision belongs to"),
+    role:            str = Query(..., enum=VALID_ROLES,   description="Role this decision belongs to"),
+    reasoning:       str = "",
+):
+    """
+    Commits a human-verified expert decision into the production Logic Vault (expert_dna).
+    Uses domain_id + role_id FKs instead of the legacy plain-text 'industry' field.
+    """
     from ..services.embeddings import EmbeddingService
     from ..services.supabase_client import SupabaseService
-    
-    scrubber = PIIScrubber(industry=industry)
+    try:
+        adapter = get_adapter(domain, role)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    scrubber = PIIScrubber()
     embedder = EmbeddingService()
     db = SupabaseService()
     clean_expert_decision = scrubber.scrub(expert_decision)
-    
+
     # 1. Generate embedding for the verified scenario context
     # This allows the runtime query to match patient questions to this specific expert logic
     vector = embedder.get_embedding(clean_expert_decision)
-    
-    # 2. Persist to high-purity expert_dna table
+
+    # 2. Persist to high-purity expert_dna table with FK references (NOT a text industry field)
     data = {
-        "scenario_id": scenario_id,
-        "expert_decision": clean_expert_decision,
+        "scenario_id":      scenario_id,
+        "expert_decision":  clean_expert_decision,
         "impact_archetype": archetype,
-        "industry": industry,
-        "embedding": vector
+        "domain_id":        adapter.get_domain_id(),   # FK → domains.id
+        "role_id":          adapter.get_role_id(),     # FK → roles.id
+        "reasoning":        reasoning,
+        "embedding":        vector,
     }
-    
+
     db.insert_expert_dna(data)
-    
-    return {"status": "committed", "message": "Expert DNA added to production Logic Vault."}
+
+    return {
+        "status":  "committed",
+        "message": "Expert DNA added to production Logic Vault.",
+        "domain":  adapter.get_domain_name(),
+        "role":    adapter.get_role_name(),
+    }
 
 @router.get("/file-info/{document_id}")
 async def get_file_info(document_id: str):

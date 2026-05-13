@@ -2,11 +2,16 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 class ChatState(BaseModel):
-    expert_id: str
+    expert_id:  str
     session_id: str
-    query: str
-    
-    # Internal Trajectory
+    query:      str
+
+    # ── Domain Identity (injected at chat API boundary) ───────────────────────
+    domain_id:       Optional[str]            = None
+    role_id:         Optional[str]            = None
+    adapter_context: Optional[Dict[str, Any]] = None  # Includes system_prompt, fallback, threshold
+
+    # ── Internal Trajectory ───────────────────────────────────────────────────
     retrieved_cases: List[dict] = Field(default_factory=list)
     rationale: str = ""
     
@@ -19,7 +24,7 @@ class ChatState(BaseModel):
     skill_result: Optional[Dict[str, Any]] = None
     skill_status: str = ""          # "SUCCESS" | "FAILED" | "DISABLED"
     
-    # Final Output
-    response: str = ""
-    confidence: float = 0.0
-    persona_mode: str = "offline"
+    # ── Final Output ──────────────────────────────────────────────────────────
+    response:     str   = ""
+    confidence:   float = 0.0
+    persona_mode: str   = "offline"

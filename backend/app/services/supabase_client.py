@@ -32,14 +32,35 @@ class SupabaseService:
         if not self.client: return
         return self.client.table("expert_dna").insert(data).execute()
 
-    def expert_vault_search(self, embedding: list[float], limit: int = 1):
-        """High-purity search against verified logic only."""
+    def expert_vault_search(
+        self,
+        embedding: list[float],
+        domain_id: str | None = None,
+        limit: int = 1,
+    ):
+        """
+        High-purity search against verified expert logic only.
+
+        Args:
+            embedding:  Query vector from EmbeddingService.
+            domain_id:  Optional FK from the `domains` table. When provided,
+                        restricts results to a single domain (e.g., Healthcare).
+                        This is the primary isolation mechanism between twins.
+            limit:      Max results to return.
+        """
         if not self.client: return []
-        response = self.client.rpc("match_expert_dna", {
+
+        query = self.client.rpc("match_expert_dna", {
             "query_embedding": embedding,
             "match_threshold": 0.40, # Lowered — short queries vs long expert paragraphs yield ~0.5-0.6 similarity
             "match_count": limit
-        }).execute()
+        })
+
+        # Apply domain FK filter when provided — prevents cross-twin contamination
+        if domain_id:
+            query = query.eq("domain_id", domain_id)
+
+        response = query.execute()
         return response.data
 
     def insert_chat_audit_log(self, data: dict):
