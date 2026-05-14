@@ -1,3 +1,9 @@
+"""
+routes.py — Skill Execution API Endpoint
+==========================================
+Uses the unified skill_router for auto-routed execution.
+NO if/elif chains — all skills are discovered and routed automatically.
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -14,6 +20,7 @@ async def execute_skill(skill_name: str, request: SkillRequest, db: Session = De
     """
     Endpoint for the LLM to trigger a skill.
     The request is validated against strict Pydantic schemas and state is logged.
+    Execution is routed automatically via skill_router — no manual mapping needed.
     """
     # 1. Basic sanity check
     if skill_name != request.skill_name:
@@ -26,49 +33,30 @@ async def execute_skill(skill_name: str, request: SkillRequest, db: Session = De
     # 3. Log Execution Start (State Engine)
     log_entry = StateTracker.log_execution_start(db, request)
     
-    # 4. Dynamic Execution Routing
+    # 4. Auto-Routed Execution (NO if/elif chain)
     try:
+        from app.skills.functional.skill_router import execute_skill as route_skill
+
         payload_dict = validated_payload.model_dump()
-        mock_result = {}
-        
-        from app.skills.wrappers.calendar_service import CalendarServiceWrapper
-        from app.skills.wrappers.email_service import EmailServiceWrapper
-        from app.skills.functional.orchestrator import FunctionalOrchestrator
-        
-        if skill_name == "book_appointment":
-            mock_result = CalendarServiceWrapper.book_appointment(payload_dict)
-        elif skill_name == "send_communication":
-            mock_result = EmailServiceWrapper.send_communication(payload_dict)
-        elif skill_name == "SKL_PRE_OP_GATEKEEPER":
-            mock_result = FunctionalOrchestrator.execute_pre_op_gatekeeper(payload_dict)
-        elif skill_name == "SKL_EXPERT_SYNTHESIS":
-            mock_result = FunctionalOrchestrator.execute_expert_synthesis(payload_dict)
-        elif skill_name == "SKL_BASELINE_VIGILANCE":
-            mock_result = FunctionalOrchestrator.execute_baseline_vigilance(payload_dict)
-        else:
-            # Default generic execution for skills without explicit wrappers yet
-            mock_result = {
-                "message": f"Successfully executed generic {skill_name}",
-                "processed_data": payload_dict
-            }
+        result = route_skill(skill_name, payload_dict)
         
         # 5. Log Success
-        StateTracker.log_execution_success(db, log_entry.id, mock_result)
+        StateTracker.log_execution_success(db, str(log_entry.id), result)
         
         return SkillResponse(
             status="SUCCESS",
-            data=mock_result,
+            data=result,
             error_message=None,
-            state_reference=UUID(log_entry.id)
+            state_reference=UUID(str(log_entry.id))
         )
         
     except Exception as e:
         # 5. Log Failure (HITL Trigger)
-        StateTracker.log_execution_failure(db, log_entry.id, str(e))
+        StateTracker.log_execution_failure(db, str(log_entry.id), str(e))
         
         return SkillResponse(
             status="FAILED",
             data=None,
             error_message=str(e),
-            state_reference=UUID(log_entry.id)
+            state_reference=UUID(str(log_entry.id))
         )

@@ -1,5 +1,5 @@
 """
-healthcare_adapter.py — Healthcare Domain / Doctor Role Adapter
+healthcare_doctor.py — Healthcare Domain / Doctor Role Adapter
 ================================================================
 Encodes the immutable clinical rules for the Doctor digital twin.
 

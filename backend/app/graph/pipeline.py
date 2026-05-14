@@ -56,7 +56,7 @@ def create_pipeline():
     def check_audit_result(state: GraphState):
         from ..models.enums import AuditStatus
         # If any case failed the Echo Verification audit
-        has_conflicts = any(r.status == AuditStatus.CONFLICT for r in state.audit_log if r.node == "visual_audit")
+        has_conflicts = any(r.node == "visual_audit" and " 0 conflicts detected." not in r.details for r in state.audit_log)
         
         if has_conflicts and state.retry_count < 3:
             print(f"--- ECHO VERIFICATION FAILED: Retrying Parse (Attempt {state.retry_count}) ---")

@@ -1,6 +1,6 @@
 """
-education_adapter.py — Education Domain / Tutor Role Adapter
-=============================================================
+education_tutor.py — Education Domain / Tutor Role Adapter
+============================================================
 Encodes the immutable pedagogical rules for the Tutor digital twin.
 
 Domain UUID:  10000000-0000-0000-0000-000000000003  (Education)

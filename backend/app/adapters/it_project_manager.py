@@ -1,6 +1,6 @@
 """
-it_adapter.py — IT Domain / Project Manager Role Adapter
-=========================================================
+it_project_manager.py — IT Domain / Project Manager Role Adapter
+==================================================================
 Encodes the immutable project governance rules for the
 Project Manager digital twin.
 
