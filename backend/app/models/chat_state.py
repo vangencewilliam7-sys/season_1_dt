@@ -9,7 +9,13 @@ class ChatState(BaseModel):
     # ── Domain Identity (injected at chat API boundary) ───────────────────────
     domain_id:       Optional[str]            = None
     role_id:         Optional[str]            = None
+    workflow_id:     Optional[str]            = None
+    task_id:         Optional[str]            = None
     adapter_context: Optional[Dict[str, Any]] = None  # Includes system_prompt, fallback, threshold
+
+    # ── Validation & Triage Levels ────────────────────────────────────────────
+    is_valid:        bool                     = True
+    triage_level:    str                      = "GREEN_ZONE" # GREEN_ZONE | YELLOW_ZONE | RED_ZONE
 
     # ── Internal Trajectory ───────────────────────────────────────────────────
     retrieved_cases: List[dict] = Field(default_factory=list)

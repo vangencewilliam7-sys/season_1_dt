@@ -36,29 +36,28 @@ class SupabaseService:
         self,
         embedding: list[float],
         domain_id: str | None = None,
+        workflow_id: str | None = None,
         limit: int = 1,
     ):
         """
         High-purity search against verified expert logic only.
 
         Args:
-            embedding:  Query vector from EmbeddingService.
-            domain_id:  Optional FK from the `domains` table. When provided,
-                        restricts results to a single domain (e.g., Healthcare).
-                        This is the primary isolation mechanism between twins.
-            limit:      Max results to return.
+            embedding:   Query vector from EmbeddingService.
+            domain_id:   Optional FK from the `domains` table.
+            workflow_id: Optional FK from the `workflows` table.
+            limit:       Max results to return.
         """
         if not self.client: return []
 
+        # Pass filters natively to the updated RPC to guarantee DB-level isolation
         query = self.client.rpc("match_expert_dna", {
             "query_embedding": embedding,
-            "match_threshold": 0.40, # Lowered — short queries vs long expert paragraphs yield ~0.5-0.6 similarity
-            "match_count": limit
+            "match_threshold": 0.40,
+            "match_count": limit,
+            "p_domain_id": domain_id,
+            "p_workflow_id": workflow_id
         })
-
-        # Apply domain FK filter when provided — prevents cross-twin contamination
-        if domain_id:
-            query = query.eq("domain_id", domain_id)
 
         response = query.execute()
         return response.data
@@ -67,6 +66,23 @@ class SupabaseService:
         """Logs the LangGraph chat execution trace to the database."""
         if not self.client: return
         return self.client.table("chat_audit_logs").insert(data).execute()
+
+    def update_patient_twin_state(self, session_id: str, mirror_data: dict):
+        """Upserts persistent diagnostic confidence and triage state mirrors."""
+        if not self.client: return
+        try:
+            res = self.client.table("patient_twin_state").select("patient_id").eq("session_id", session_id).execute()
+            if res.data:
+                return self.client.table("patient_twin_state").update({
+                    "mirror_state": mirror_data
+                }).eq("session_id", session_id).execute()
+            else:
+                return self.client.table("patient_twin_state").insert({
+                    "session_id": session_id,
+                    "mirror_state": mirror_data
+                }).execute()
+        except Exception as e:
+            print(f"Error updating patient twin state mirror: {e}")
 
     def get_count(self, table: str) -> int:
         """Returns the total row count for a given table."""

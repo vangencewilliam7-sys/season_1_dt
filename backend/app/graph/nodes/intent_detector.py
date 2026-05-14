@@ -7,10 +7,17 @@ from app.skills.middleware.validation import SKILL_REGISTRY
 def intent_detection_node(state: ChatState) -> ChatState:
     print(f"--- CHAT: Intent Detection Node ---")
     
-    # Emergency keywords fallback
-    emergency_keywords = ["bleeding", "emergency", "suicide", "hurt", "dying", "blood"]
-    if any(keyword in state.query.lower() for keyword in emergency_keywords):
-        state.intent_type = "knowledge"
+    # Red Zone Emergency escalation triaging layer
+    emergency_keywords = ["bleeding", "emergency", "suicide", "hurt", "dying", "blood", "severe pain", "chest pain"]
+    query_lower = state.query.lower()
+    
+    has_emergency = any(keyword in query_lower for keyword in emergency_keywords)
+    has_critical_lab = ("k+" in query_lower or "potassium" in query_lower) and ("6." in query_lower or "7." in query_lower)
+    
+    if has_emergency or has_critical_lab:
+        print("--- RED ZONE ESCALATION DETECTED ---")
+        state.intent_type = "emergency_escalation"
+        state.triage_level = "RED_ZONE"
         return state
 
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
@@ -145,6 +152,9 @@ Return ONLY valid JSON.
             state.low_data_mode = args.get("low_data_mode", False)
             state.missing_metrics = args.get("missing_metrics") or []
             state.accumulated_evidence = args.get("accumulated_evidence") or {}
+            
+            if state.low_data_mode:
+                state.triage_level = "YELLOW_ZONE"
             
             # If evidence was accumulated, compute likelihood score and route to main path
             if state.accumulated_evidence:

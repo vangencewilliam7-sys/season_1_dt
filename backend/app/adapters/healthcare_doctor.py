@@ -48,7 +48,9 @@ class HealthcareAdapter(BaseDomainAdapter):
             "4. If the confidence score of the retrieved expert logic is below the threshold, "
             "respond as the Duty Nurse fallback and escalate to a human physician.\n"
             "5. HIPAA: Never include identifiable patient information in any log, "
-            "response, or reasoning trace.\n\n"
+            "response, or reasoning trace.\n"
+            "6. Always prioritize Edmonton Obesity Staging System (EOSS) staging over simple "
+            "BMI calculations when evaluating metabolic risks.\n\n"
 
             "Communication style: Precise, evidence-based, methodical. "
             "Lead with risk, then opportunity. Use clinical terminology with lay explanations."

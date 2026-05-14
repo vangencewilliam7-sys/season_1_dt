@@ -78,6 +78,10 @@ create table if not exists expert_dna (
     impact_archetype text    check (impact_archetype in ('Safety', 'Structural', 'Informational')),
     industry         text    default 'fertility',
     reasoning        text,
+    domain_id        uuid,
+    role_id          uuid,
+    workflow_id      uuid,
+    task_id          uuid,
     embedding        vector(1536),
     created_at       timestamp with time zone default now()
 );
@@ -136,7 +140,9 @@ $$;
 create or replace function match_expert_dna(
     query_embedding vector(1536),
     match_threshold float,
-    match_count     int
+    match_count     int,
+    p_domain_id     uuid default null,
+    p_workflow_id   uuid default null
 )
 returns table (
     id               uuid,
@@ -158,6 +164,8 @@ language sql stable as $$
         1 - (embedding <=> query_embedding) as similarity
     from expert_dna
     where 1 - (embedding <=> query_embedding) > match_threshold
+      and (p_domain_id is null or domain_id = p_domain_id)
+      and (p_workflow_id is null or workflow_id = p_workflow_id)
     order by similarity desc
     limit match_count;
 $$;
