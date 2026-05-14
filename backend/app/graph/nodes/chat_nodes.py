@@ -62,6 +62,11 @@ def generation_node(state: ChatState) -> ChatState:
     print(f"--- CHAT: Generation Node ---")
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     
+    proxy_ctx = ""
+    if state.accumulated_evidence or state.likelihood_score:
+        evidence_lines = "\n".join([f"  - {k}: {v}" for k, v in state.accumulated_evidence.items()])
+        proxy_ctx = f"\n\nPROXY EVIDENCE GATHERED:\n{evidence_lines}\nLIKELIHOOD SCORE / PROBABILISTIC CONCLUSION:\n{state.likelihood_score}\n"
+    
     system_prompt = f"""You are Dr. Sarah Jenkins' Digital Twin, a Senior Reproductive Endocrinologist.
 You must apply strict clinical safety protocols while maintaining a deeply empathetic, patient-centric bedside manner.
 Instead of asking endless questions, provide direct, actionable medical guidance based ONLY on your explicit rationale.
@@ -76,7 +81,7 @@ When explaining clinical reports (like labs, scans, or fertility assessments), y
 6. **Incomplete evaluation acknowledgment**: Call out missing essential checks (tubal patency, endometriosis).
 7. **Clinical thresholds**: Define when to wait naturally vs when to escalate (e.g., 6–12 months rules).
 8. **Actionable fertility guidance**: Provide specific advice like timing intercourse and ovulation tracking (no generic lifestyle tips).
-9. **Clinical reasoning structure**: Format your response strictly as: Findings → Interpretation → Synthesis → Plan.
+9. **Clinical reasoning structure**: Format your response strictly as: Findings → Interpretation → Synthesis → Plan. Include gathered proxy evidence under Findings and Likelihood Score under Interpretation.
 10. **Edge case awareness**: Handle abnormal/borderline scenarios explicitly (PCOS, low AMH).
 11. **Uncertainty handling**: Include your confidence level and limitations ("based on available data").
 12. **Personalization**: Adjust advice explicitly based on the patient's age, history, and goals.
@@ -90,7 +95,7 @@ When explaining clinical reports (like labs, scans, or fertility assessments), y
 - DO NOT combine multiple numbered points on the same line.
 
 YOUR EXPLICIT RATIONALE (Audit Trace):
-{state.rationale}
+{state.rationale}{proxy_ctx}
 """
 
     completion = client.chat.completions.create(
@@ -137,3 +142,47 @@ def audit_node(state: ChatState) -> ChatState:
         print(f"Audit log failed: {e}")
         
     return state
+
+def proxy_gathering_node(state: ChatState) -> ChatState:
+    print(f"--- CHAT: Proxy Gathering Node (Low Data State) ---")
+    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    
+    missing_str = ", ".join(state.missing_metrics) if state.missing_metrics else "blood pressure, blood glucose, weight/height"
+    
+    system_prompt = f"""You are the Proxy Agent for a Medical Digital Twin operating in a Low Data State.
+The user is asking for medical evaluation/diagnosis but lacks formal metrics or objective vitals ({missing_str}).
+Instead of declining to help or hitting a dead end, you must deploy the **Symptomatic Proxy & Telemedicine Self-Exam** strategy to extract 'invisible' vitals.
+
+Formulate an empathetic, professional response that asks 2 or 3 highly specific proxy questions to estimate risk. Use the following proxy framework:
+- **Blood Pressure Proxy**: Ask about headaches at the back of the head or a 'thumping' feeling in the ears.
+- **Blood Glucose Proxy**: Ask about excessive thirst or frequent urination, especially at night.
+- **Visceral Fat Proxy**: Ask if their belt size has expanded even if weight stayed the same.
+- **Visual Physical Exam**: Guide them to perform a 'Neck Check' in the mirror for Acanthosis Nigricans (darkened, velvety skin patches on the neck or armpits) or the Waist-to-Height string ratio test.
+- **Longitudinal Mapping**: Ask about stress triggers or past recovery barriers.
+
+**FORMATTING RULES:**
+- Be warm, structured, and easy to read.
+- Number your proxy questions clearly.
+- State that these everyday observations help bridge the gap left by missing clinic data.
+"""
+
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0.2,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": state.query}
+            ]
+        )
+        state.response = completion.choices[0].message.content
+        state.persona_mode = "deputy"
+        state.confidence = 1.0  # High confidence in gathering proxies
+        state.rationale = f"Low Data State detected. Triggered Proxy Agent to collect invisible vitals for missing metrics: {missing_str}."
+    except Exception as e:
+        print(f"Proxy gathering generation failed: {e}")
+        state.response = "I notice we don't have your recent vitals on file. Could you let me know if you've been experiencing excessive thirst, frequent urination, or noticed any dark velvety patches on the back of your neck?"
+        state.persona_mode = "deputy"
+        
+    return state
+

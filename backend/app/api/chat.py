@@ -67,6 +67,12 @@ async def chat_message(req: ChatRequest):
         detected_skill = result_state_dict.get("detected_skill", "")
         extracted_params = result_state_dict.get("extracted_params", {})
 
+        # PROXY GATHERING FIELDS
+        low_data_mode = result_state_dict.get("low_data_mode", False)
+        missing_metrics = result_state_dict.get("missing_metrics", [])
+        accumulated_evidence = result_state_dict.get("accumulated_evidence", {})
+        likelihood_score = result_state_dict.get("likelihood_score", "")
+
         return {
             "response":     response_text,
             "confidence":   confidence,
@@ -80,7 +86,11 @@ async def chat_message(req: ChatRequest):
             "skill_result": skill_result,
             "skill_status": skill_status,
             "detected_skill": detected_skill,
-            "extracted_params": extracted_params
+            "extracted_params": extracted_params,
+            "low_data_mode": low_data_mode,
+            "missing_metrics": missing_metrics,
+            "accumulated_evidence": accumulated_evidence,
+            "likelihood_score": likelihood_score
         }
     except Exception as e:
         print(f"Chat Engine Error: {str(e)}")

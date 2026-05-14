@@ -28,3 +28,10 @@ class ChatState(BaseModel):
     response:     str   = ""
     confidence:   float = 0.0
     persona_mode: str   = "offline"
+
+    # ── Proxy Evidence Gathering (Low Data State) ─────────────────────────────
+    low_data_mode:        bool           = False
+    missing_metrics:      List[str]      = Field(default_factory=list)
+    accumulated_evidence: Dict[str, Any] = Field(default_factory=dict)
+    likelihood_score:     str            = ""
+
