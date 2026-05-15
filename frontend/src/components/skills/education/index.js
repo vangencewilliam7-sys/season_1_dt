@@ -18,3 +18,5 @@
  */
 
 export { default as EducationSkillIndex } from './EducationSkillIndex';
+export { default as StudentEngagementPanel } from './StudentEngagementPanel';
+export { default as StudentMonitoringPanel } from './StudentMonitoringPanel';

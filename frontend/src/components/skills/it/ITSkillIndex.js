@@ -1,4 +1,5 @@
 'use client';
+import ITProjectPredictionPanel from './ITProjectPredictionPanel';
 
 /**
  * ITSkillIndex.js — IT Skills Landing Component
@@ -33,7 +34,10 @@ export default function ITSkillIndex() {
       }}>
         Sprint Risk Monitor · Escalation Brief · Velocity Tracker
       </p>
-      {/* TODO: Dev B — Render skill cards here */}
+      
+      <div style={{ marginTop: 24 }}>
+        <ITProjectPredictionPanel />
+      </div>
     </div>
   );
 }

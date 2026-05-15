@@ -25,19 +25,18 @@ class SendCommunicationPayload(BaseModel):
 
 
 # ── Functional Skills (IT) ────────────────────────────────────────────────────
-# TODO: Dev B — add IT-specific functional skill payloads here.
-# Examples:
-#
-# class SklSprintRiskMonitorPayload(BaseModel):
-#     project_id: UUID
-#     sprint_number: int
-#     risk_threshold: float = Field(default=0.7, description="Minimum risk score to trigger alert")
-#
-# class SklEscalationBriefPayload(BaseModel):
-#     project_id: UUID
-#     blocker_description: str
-#     severity: Literal["HIGH", "CRITICAL"]
-
+class SklItProjectPredictionPayload(BaseModel):
+    project_id: UUID
+    
+    # Execution Metrics
+    velocity_delta: float = Field(..., description="Change in team velocity vs previous sprint (%)")
+    requirement_churn: float = Field(..., description="Percentage of requirements changed mid-sprint")
+    dependency_lag_days: int = Field(default=0, description="Total days stalled due to external dependencies")
+    
+    # Deep Metrics
+    qa_failure_rate: float = Field(default=0.05, description="Percentage of tickets failing QA on first pass")
+    documentation_completeness: float = Field(default=0.8, description="0 to 1 score of technical documentation readiness")
+    team_burnout_risk: float = Field(default=0.1, description="0 to 1 score based on overtime and sentiment")
 
 # ── IT Skill Registry ─────────────────────────────────────────────────────────
 # Maps skill_name → payload schema for this domain.
@@ -45,6 +44,5 @@ class SendCommunicationPayload(BaseModel):
 
 IT_SKILL_REGISTRY = {
     "send_communication": SendCommunicationPayload,
-    # "SKL_SPRINT_RISK_MONITOR": SklSprintRiskMonitorPayload,
-    # "SKL_ESCALATION_BRIEF":    SklEscalationBriefPayload,
+    "SKL_IT_PROJECT_PREDICTION": SklItProjectPredictionPayload,
 }

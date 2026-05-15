@@ -50,17 +50,21 @@ class SupabaseService:
         """
         if not self.client: return []
 
-        # Pass filters natively to the updated RPC to guarantee DB-level isolation
-        query = self.client.rpc("match_expert_dna", {
-            "query_embedding": embedding,
-            "match_threshold": 0.40,
-            "match_count": limit,
-            "p_domain_id": domain_id,
-            "p_workflow_id": workflow_id
-        })
+        try:
+            # Pass filters natively to the updated RPC to guarantee DB-level isolation
+            query = self.client.rpc("match_expert_dna", {
+                "query_embedding": embedding,
+                "match_threshold": 0.40,
+                "match_count": limit,
+                "p_domain_id": domain_id,
+                "p_workflow_id": workflow_id
+            })
 
-        response = query.execute()
-        return response.data
+            response = query.execute()
+            return response.data
+        except Exception as e:
+            print(f"Supabase RPC match_expert_dna failed: {e}. Returning empty list.")
+            return []
 
     def insert_chat_audit_log(self, data: dict):
         """Logs the LangGraph chat execution trace to the database."""

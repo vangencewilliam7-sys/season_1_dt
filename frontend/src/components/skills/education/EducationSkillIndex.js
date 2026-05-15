@@ -1,4 +1,6 @@
 'use client';
+import StudentEngagementPanel from './StudentEngagementPanel';
+import StudentMonitoringPanel from './StudentMonitoringPanel';
 
 /**
  * EducationSkillIndex.js — Education Skills Landing Component
@@ -31,9 +33,13 @@ export default function EducationSkillIndex() {
         color: 'var(--text-secondary, #475569)',
         fontSize: '0.875rem',
       }}>
-        Mastery Check · Learning Gap Detector · Progress Tracker
+        Student Engagement · AI Tutor Operations
       </p>
-      {/* TODO: Dev C — Render skill cards here */}
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <StudentEngagementPanel />
+        <StudentMonitoringPanel />
+      </div>
     </div>
   );
 }
