@@ -4,6 +4,7 @@ from ...services.supabase_client import SupabaseService
 from openai import OpenAI
 import os
 import time
+import datetime
 
 def retrieve_context_node(state: ChatState) -> ChatState:
     print(f"--- CHAT: Retrieval Node ---")
@@ -236,6 +237,19 @@ def persistence_node(state: ChatState) -> ChatState:
             "timestamp": time.time()
         }
         db.update_patient_twin_state(state.session_id, mirror_data)
+
+        # Update clinical notes if this is a registered patient session
+        if state.session_id.startswith("onboarding-"):
+            patient_id = state.session_id.replace("onboarding-", "")
+            note_entry = {
+                "timestamp": datetime.datetime.now().isoformat(),
+                "query": state.query,
+                "situation_summary": state.rationale if state.rationale else "Patient interaction completed.",
+                "triage_result": state.triage_level
+            }
+            db.update_patient_notes(patient_id, note_entry)
+            print(f"--- CLINICAL LOG: Updated notes for patient {patient_id} ---")
+
     except Exception as e:
-        print(f"Mirror state persistence failed: {e}")
+        print(f"Mirror state/notes persistence failed: {e}")
     return state

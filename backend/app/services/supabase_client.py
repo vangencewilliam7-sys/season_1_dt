@@ -2,7 +2,7 @@ import os
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 class SupabaseService:
     def __init__(self):
@@ -41,19 +41,12 @@ class SupabaseService:
     ):
         """
         High-purity search against verified expert logic only.
-
-        Args:
-            embedding:   Query vector from EmbeddingService.
-            domain_id:   Optional FK from the `domains` table.
-            workflow_id: Optional FK from the `workflows` table.
-            limit:       Max results to return.
         """
         if not self.client: return []
 
-        # Pass filters natively to the updated RPC to guarantee DB-level isolation
         query = self.client.rpc("match_expert_dna", {
             "query_embedding": embedding,
-            "match_threshold": 0.40,
+            "match_threshold": 0.35,
             "match_count": limit,
             "p_domain_id": domain_id,
             "p_workflow_id": workflow_id
@@ -84,7 +77,32 @@ class SupabaseService:
         except Exception as e:
             print(f"Error updating patient twin state mirror: {e}")
 
+    def create_patient(self, data: dict):
+        """Creates a new patient record in the registry."""
+        if not self.client: return
+        return self.client.table("patients").insert(data).execute()
+
+    def get_patient(self, patient_id: str):
+        """Retrieves a patient record by ID."""
+        if not self.client: return None
+        res = self.client.table("patients").select("*").eq("id", patient_id).execute()
+        return res.data[0] if res.data else None
+
+    def update_patient_notes(self, patient_id: str, note_entry: dict):
+        """Appends a new clinical note to the patient's record."""
+        if not self.client: return
+        # Get existing notes first
+        res = self.client.table("patients").select("clinical_notes").eq("id", patient_id).execute()
+        notes = res.data[0].get("clinical_notes", []) if res.data else []
+        notes.append(note_entry)
+        
+        return self.client.table("patients").update({
+            "clinical_notes": notes
+        }).eq("id", patient_id).execute()
+
     def get_count(self, table: str) -> int:
+
+
         """Returns the total row count for a given table."""
         if not self.client: return 0
         try:

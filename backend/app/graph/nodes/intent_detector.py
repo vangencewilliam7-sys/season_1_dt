@@ -7,8 +7,8 @@ from app.skills.middleware.validation import SKILL_REGISTRY
 def intent_detection_node(state: ChatState) -> ChatState:
     print(f"--- CHAT: Intent Detection Node ---")
     
-    # Red Zone Emergency escalation triaging layer
-    emergency_keywords = ["bleeding", "emergency", "suicide", "hurt", "dying", "blood", "severe pain", "chest pain"]
+    # Red Zone Emergency escalation triaging layer (Acute symptoms only)
+    emergency_keywords = ["suicide", "overdose", "unconscious", "bleeding profusely", "severe chest pain", "active self-harm"]
     query_lower = state.query.lower()
     
     has_emergency = any(keyword in query_lower for keyword in emergency_keywords)

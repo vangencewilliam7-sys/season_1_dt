@@ -7,6 +7,8 @@ from ..services.pii_scrubber import PIIScrubber
 from ..services.bypass import BypassService
 from ..adapters import get_adapter, VALID_DOMAINS, VALID_ROLES
 import time
+import datetime
+
 
 router = APIRouter()
 
@@ -134,5 +136,10 @@ async def chat_message(req: ChatRequest):
             "triage_level": triage_level
         }
     except Exception as e:
+        import traceback
+        with open("error_log.txt", "a") as f:
+            f.write(f"\n--- ERROR at {datetime.datetime.now()} ---\n")
+            f.write(traceback.format_exc())
         print(f"Chat Engine Error: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

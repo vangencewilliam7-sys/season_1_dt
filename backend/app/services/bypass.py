@@ -3,7 +3,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from .context_manager import ContextManager
 
-load_dotenv()
+load_dotenv(override=True)
 
 class BypassService:
     def __init__(self):
@@ -17,25 +17,17 @@ class BypassService:
         self.role = ctx['expert_role']
 
     def check_risk(self, prompt: str) -> bool:
-        """Expects prompt to be pre-scrubbed before any LLM call."""
-        # 1. Keyword check (Fast, deterministic)
+        """Deterministic emergency check. No LLM used here to prevent false positives."""
         prompt_lower = prompt.lower()
-        if any(keyword in prompt_lower for keyword in self.emergency_keywords):
-            return True
-            
-        # 2. LLM Risk Assessment (Nuanced)
-        if not self.client: return False
         
-        assessment = self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": f"You are a risk triage engine for {self.role}. Respond only with 'SAFE' or 'BYPASS'."},
-                {"role": "user", "content": f"Does this query require immediate human expert intervention? Query: {prompt}"}
-            ]
-        )
-        risk = assessment.choices[0].message.content.strip().upper()
-        if risk == "BYPASS":
-            print(f"--- EMERGENCY BYPASS: LLM detected clinical risk ---")
-            return True
-            
+        # 1. Extreme Life-Threat Keywords ONLY
+        emergency_triggers = ["suicide", "kill myself", "heart attack", "unconscious"]
+        
+        for trigger in emergency_triggers:
+            if trigger in prompt_lower:
+                print(f"--- BYPASS TRIGGERED: {trigger} ---")
+                return True
+        
+        # Everything else is SAFE for the AI Graph
+        print(f"--- GATEKEEPER: SAFE ---")
         return False
