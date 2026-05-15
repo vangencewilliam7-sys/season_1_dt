@@ -1,17 +1,15 @@
-- `[x]` Initialize database layer updates
-  - `[x]` Modify `sql_schemas/01_init_schema.sql` to enhance `match_expert_dna` RPC signature
-  - `[x]` Create `sql_schemas/07_patient_twin_state.sql` table definition
-- `[x]` Update domain adapters
-  - `[x]` Inject immutable rule #6 into `backend/app/adapters/healthcare_doctor.py`
-- `[x]` Expand Supabase client layer
-  - `[x]` Update `backend/app/services/supabase_client.py` to support `workflow_id` filtering and persistent mirror commits
-- `[x]` Extend Models layer
-  - `[x]` Update `backend/app/models/chat_state.py` to incorporate new routing tracking variables
-- `[x]` Refactor Graph Nodes layer
-  - `[x]` Update `backend/app/graph/nodes/intent_detector.py` into a three-tiered triage matrix
-  - `[x]` Refactor `backend/app/graph/nodes/chat_nodes.py` to seal retrieval leaks, add validation, dynamic personas, emergency escalations, and mirror persistence
-- `[x]` Assemble Graph Orchestration layer
-  - `[x]` Update `backend/app/graph/chat_pipeline.py` wiring and conditional path routing
-- `[x]` Secure API Gateway layer
-  - `[x]` Inject Pre-Graph Gatekeeper checks using `BypassService` inside `backend/app/api/chat.py`
-- `[x]` Finalize verification
+# Task List - Workflow 5: Student Monitoring & Risk Escalation
+
+- [x] **Phase 1: Backend Foundation**
+    - [x] Create `backend/app/skills/functional/education/student_monitoring.py`
+    - [x] Update `backend/app/skills/schemas/education.py` with deep metrics
+    - [x] Create `backend/scratch/test_student_monitoring.py` for logic validation
+
+- [x] **Phase 2: Frontend Implementation**
+    - [x] Create `frontend/src/components/skills/education/StudentMonitoringPanel.js`
+    - [x] Integrate panel into `frontend/src/components/skills/education/index.js`
+    - [x] Polish UI with "Deep Metrics" visualizations
+
+- [ ] **Phase 3: Verification & Documentation**
+    - [ ] Run test scripts and verify risk classification
+    - [x] Create `docs/WF5_monitoring_walkthrough.md`

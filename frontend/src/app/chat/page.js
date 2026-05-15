@@ -11,7 +11,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello. I'm Dr. [Expert]'s Digital Twin. I can answer questions grounded in verified clinical decisions and documented protocols. How can I help you today?",
+      content: "Hello! I'm your AI Academic Tutor. I can help you with your studies, explain concepts, and guide you through practice. What course are we working on today?",
       confidence: 0.97,
       mode: 'primary',
       sources: [],
@@ -87,7 +87,7 @@ export default function ChatPage() {
       const res = await fetch(`${API}/api/chat/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expert_id: 'demo', message: input, session_id: 'demo-session' }),
+        body: JSON.stringify({ expert_id: 'demo', message: input, session_id: 'demo-session', domain: 'education', role: 'tutor' }),
       })
       const data = await res.json()
       const assistantMessage = {
@@ -150,7 +150,7 @@ export default function ChatPage() {
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Twin Chat</h1>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-              Expert: Fertility Specialist · Domain: Healthcare
+              Expert: Academic Tutor · Domain: Education
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -329,7 +329,7 @@ export default function ChatPage() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-              placeholder="Ask the Doctor Twin a clinical question..."
+              placeholder="Ask your AI Tutor a question..."
               style={{
                 flex: 1, padding: '13px 18px',
                 background: 'var(--bg-elevated)',

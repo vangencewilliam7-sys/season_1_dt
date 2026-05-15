@@ -43,17 +43,20 @@ class SupabaseService:
         High-purity search against verified expert logic only.
         """
         if not self.client: return []
+        try:
+            query = self.client.rpc("match_expert_dna", {
+                "query_embedding": embedding,
+                "match_threshold": 0.35,
+                "match_count": limit,
+                "p_domain_id": domain_id,
+                "p_workflow_id": workflow_id
+            })
 
-        query = self.client.rpc("match_expert_dna", {
-            "query_embedding": embedding,
-            "match_threshold": 0.35,
-            "match_count": limit,
-            "p_domain_id": domain_id,
-            "p_workflow_id": workflow_id
-        })
-
-        response = query.execute()
-        return response.data
+            response = query.execute()
+            return response.data
+        except Exception as e:
+            print(f"Supabase RPC match_expert_dna failed: {e}. Returning empty list.")
+            return []
 
     def insert_chat_audit_log(self, data: dict):
         """Logs the LangGraph chat execution trace to the database."""
@@ -101,8 +104,6 @@ class SupabaseService:
         }).eq("id", patient_id).execute()
 
     def get_count(self, table: str) -> int:
-
-
         """Returns the total row count for a given table."""
         if not self.client: return 0
         try:
@@ -112,4 +113,3 @@ class SupabaseService:
         except Exception as e:
             print(f"Error fetching count for {table}: {e}")
             return 0
-

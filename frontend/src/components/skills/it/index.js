@@ -18,3 +18,4 @@
  */
 
 export { default as ITSkillIndex } from './ITSkillIndex';
+export { default as ITProjectPredictionPanel } from './ITProjectPredictionPanel';

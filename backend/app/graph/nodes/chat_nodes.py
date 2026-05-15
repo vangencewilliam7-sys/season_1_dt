@@ -114,7 +114,7 @@ When explaining clinical reports (like labs, scans, or physical assessments), yo
 
 **FORMATTING RULES:**
 - NEVER output a single giant block of text.
-- Use DOUBLE NEWLINES (\\n\\n) between major sections.
+- Use DOUBLE NEWLINES (\n\n) between major sections.
 - EVERY numbered point MUST start on its own brand new line.
 - Use bold headers and sub-headers for readability.
 

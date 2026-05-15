@@ -20,26 +20,33 @@ from uuid import UUID
 
 
 # ── Functional Skills (Education) ─────────────────────────────────────────────
-# TODO: Dev C — add Education-specific functional skill payloads here.
-# Examples:
-#
-# class SklMasteryCheckPayload(BaseModel):
-#     student_id: UUID
-#     topic_id: str
-#     session_id: UUID
-#     difficulty_level: Literal["BEGINNER", "INTERMEDIATE", "ADVANCED"]
-#
-# class SklLearningGapDetectorPayload(BaseModel):
-#     student_id: UUID
-#     assessment_results: List[dict] = Field(description="Array of {topic, score, max_score}")
-#     detect_prerequisites: bool = Field(default=True)
+class SklStudentEngagementPayload(BaseModel):
+    student_id: UUID
+    persona: Literal["BEGINNER", "FAST_LEARNER", "EXAM_FOCUSED", "CAREER_SWITCH", "LOW_CONFIDENCE", "DEFAULT"] = Field(default="DEFAULT")
+    interaction_type: Literal["QUERY_RESOLUTION", "PROACTIVE_ENGAGEMENT", "DEADLINE_NUDGE"]
+    query_text: Optional[str] = Field(default=None, description="The student's incoming message, if any.")
+    context_data: dict = Field(default_factory=dict, description="Additional context like course name, missed deadlines, or recent grades.")
 
+class SklStudentMonitoringPayload(BaseModel):
+    student_id: UUID
+    persona: str = Field(default="DEFAULT")
+    
+    # Core Metrics
+    login_frequency: int = Field(..., description="Logins in the last 7 days.")
+    avg_score: float = Field(..., description="Current average assignment score.")
+    missed_deadlines: int = Field(default=0)
+    
+    # Deep Intelligence Metrics (The WOW Factor)
+    curiosity_coefficient: float = Field(default=0.5, description="0 to 1 score of question depth.")
+    sentiment_trajectory: Literal["IMPROVING", "STABLE", "DECLINING"] = Field(default="STABLE")
+    help_seeking_delay_days: int = Field(default=0, description="Days between friction and help request.")
+    habit_consistency: float = Field(default=0.9, description="0 to 1 score of schedule stability.")
 
 # ── Education Skill Registry ──────────────────────────────────────────────────
 # Maps skill_name → payload schema for this domain.
 # The central validation.py merges all domain registries automatically.
 
 EDUCATION_SKILL_REGISTRY = {
-    # "SKL_MASTERY_CHECK":         SklMasteryCheckPayload,
-    # "SKL_LEARNING_GAP_DETECTOR": SklLearningGapDetectorPayload,
+    "SKL_STUDENT_ENGAGEMENT": SklStudentEngagementPayload,
+    "SKL_STUDENT_MONITORING": SklStudentMonitoringPayload,
 }
