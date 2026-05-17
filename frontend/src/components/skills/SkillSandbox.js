@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { SkillsService } from '../../lib/api/services/SkillsService'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
 
@@ -30,23 +31,8 @@ export default function SkillSandbox() {
     setResult(null)
     try {
       const payloadObj = JSON.parse(payloadStr)
-      const reqBody = {
-        skill_name: skillName,
-        payload: payloadObj,
-        metadata: {
-          workflow_id: "00000000-0000-0000-0000-000000000000",
-          expert_id: "11111111-1111-1111-1111-111111111111"
-        }
-      }
-
-      const res = await fetch(`${API_BASE}/skills/execute/${skillName}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(reqBody)
-      })
-      
-      const data = await res.json()
-      setResult({ status: res.status, data })
+      const data = await SkillsService.executeSkill(skillName, payloadObj)
+      setResult({ status: 200, data })
     } catch (err) {
       setResult({ status: 'Error', data: err.toString() })
     } finally {

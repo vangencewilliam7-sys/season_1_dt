@@ -1,9 +1,11 @@
 'use client'
 import Sidebar from '../../components/layout/Sidebar'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import SkillSandbox from '../../components/skills/SkillSandbox'
 import GuardrailEditor from '../../components/skills/GuardrailEditor'
 import ExecutionLogViewer from '../../components/skills/ExecutionLogViewer'
+import { WarningIcon } from '../../components/ui/SparkleIcons'
+import { SkillsService } from '../../lib/api/services/SkillsService'
 
 const TABS = [
   { id: 'registry',   label: 'Registry',    icon: '📋' },
@@ -12,36 +14,49 @@ const TABS = [
   { id: 'audit',      label: 'Audit Log',   icon: '📊' },
 ]
 
-// ─── Skill Registry Data ─────────────────────────────────────────────
-const SKILLS = [
-  // Base Skills (B)
-  { id: 'book_appointment', label: 'Book Appointment', type: 'base', status: 'implemented',
-    description: 'Book a calendar appointment via external calendar API.', params: ['patient_id', 'appointment_time', 'reason_code'] },
-  { id: 'send_communication', label: 'Send Communication', type: 'base', status: 'implemented',
-    description: 'Send email/WhatsApp via external messaging provider.', params: ['template_id', 'recipient_address', 'dynamic_vars'] },
-  { id: 'ACT_VISION_OCR', label: 'Vision OCR', type: 'base', status: 'implemented',
-    description: 'Extract text from clinical images (vitals, lab results).', params: ['image_url', 'extraction_type'] },
-  { id: 'KNW_REPORT_SYNTHESIS', label: 'Report Synthesis', type: 'base', status: 'implemented',
-    description: 'Aggregate clinical data from multiple sources.', params: ['patient_id', 'data_sources'] },
-  { id: 'ACT_CHECKLIST_VERIFY', label: 'Checklist Verify', type: 'base', status: 'implemented',
-    description: 'Audit clinical artifacts for presence and completeness.', params: ['patient_id', 'required_documents'] },
-  // Functional Skills (F)
-  { id: 'SKL_PRE_OP_GATEKEEPER', label: 'Pre-Op Gatekeeper', type: 'functional', status: 'implemented',
-    description: 'Multi-step pre-surgery readiness: checklist audit → vitals extraction → verdict.', params: ['patient_id', 'surgery_date', 'required_documents'], composes: ['ACT_CHECKLIST_VERIFY', 'ACT_VISION_OCR'] },
-  { id: 'SKL_EXPERT_SYNTHESIS', label: 'Expert Synthesis', type: 'functional', status: 'implemented',
-    description: '3-step saga: data aggregation → expert brief formatting → conditional dispatch.', params: ['patient_id', 'data_sources', 'release_approved'], composes: ['KNW_REPORT_SYNTHESIS', 'send_communication'] },
-  { id: 'SKL_BASELINE_VIGILANCE', label: 'Baseline Vigilance', type: 'functional', status: 'implemented',
-    description: 'Extract vitals via OCR → compare against patient baseline → breach detection.', params: ['patient_id', 'baseline_thresholds', 'image_url'], composes: ['ACT_VISION_OCR'] },
-]
-
+// No local dummy data. All skills are fetched from the backend.
 export default function SkillsPage() {
   const [activeTab, setActiveTab] = useState('registry')
+  
+  const [skills, setSkills] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [skillStates, setSkillStates] = useState({})
 
-  const baseSkills = SKILLS.filter(s => s.type === 'base')
-  const functionalSkills = SKILLS.filter(s => s.type === 'functional')
+  useEffect(() => {
+    SkillsService.getSkills()
+      .then(data => {
+        if (data && Array.isArray(data)) {
+          setSkills(data)
+          const initial = {}
+          data.forEach(s => {
+            initial[s.id] = s.default_state ?? true
+          })
+          setSkillStates(initial)
+        } else {
+          setSkills([])
+        }
+      })
+      .catch(err => {
+        console.error("Failed to fetch skills from backend:", err.message)
+        setSkills([])
+      })
+      .finally(() => {
+        setIsLoading(false)
+      })
+  }, [])
+
+  const toggleSkillState = (id, newState) => {
+    setSkillStates(prev => ({
+      ...prev,
+      [id]: newState
+    }))
+  }
+
+  const baseSkills = skills.filter(s => s.type === 'base')
+  const functionalSkills = skills.filter(s => s.type === 'functional')
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#F4F7FB' }}>
       <Sidebar active="/skills" />
       <main style={{ flex: 1, padding: '32px 36px', overflow: 'auto' }}>
 
@@ -49,41 +64,60 @@ export default function SkillsPage() {
         <div className="fade-up" style={{ marginBottom: 28 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h1 style={{ fontSize: 22, fontWeight: 700 }}>Skills Enablement Pillar</h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>
-                Base Skills (B) are atomic primitives. Functional Skills (F) orchestrate Base Skills into composite workflows.
+              <h1 style={{ fontSize: 24, fontWeight: 700, color: '#03045E' }}>Skills Enablement Pillar</h1>
+              <p style={{ color: '#475569', fontSize: 13.5, marginTop: 4 }}>
+                Base Skills (B) are atomic primitives. Functional Skills (F) orchestrate Base Skills into dynamic workflows with toggleable execution gates.
               </p>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <span className="badge badge-blue">{baseSkills.length} Base</span>
-              <span className="badge badge-teal">{functionalSkills.length} Functional</span>
+              <span className="badge" style={{ background: '#CAF0F8', color: '#03045E', fontWeight: 700, padding: '6px 12px', fontSize: 12 }}>
+                {baseSkills.length} Base Primitives
+              </span>
+              <span className="badge" style={{ background: '#D1FAE5', color: '#065F46', fontWeight: 700, padding: '6px 12px', fontSize: 12 }}>
+                {functionalSkills.length} Orchestrations
+              </span>
             </div>
           </div>
         </div>
 
+        {/* Loading / Empty States */}
+        {isLoading && activeTab === 'registry' && (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>
+            <div style={{ width: 32, height: 32, border: '3px solid #E2E8F0', borderTop: '3px solid #0077B6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+            Loading registry...
+          </div>
+        )}
+
+        {!isLoading && skills.length === 0 && activeTab === 'registry' && (
+          <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '40px', borderRadius: '16px', textAlign: 'center', color: '#64748B' }}>
+            No skills have been registered or connected to this twin yet.
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="fade-up" style={{
           display: 'flex', gap: 4, marginBottom: 24,
-          borderBottom: '1px solid var(--border)', paddingBottom: 0,
+          borderBottom: '1px solid #E2E8F0', paddingBottom: 0,
         }}>
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                padding: '10px 18px',
+                padding: '12px 20px',
                 border: 'none',
-                background: activeTab === tab.id ? 'var(--bg-card)' : 'transparent',
-                borderBottom: activeTab === tab.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                color: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--text-muted)',
+                background: activeTab === tab.id ? '#FFFFFF' : 'transparent',
+                borderBottom: activeTab === tab.id ? '2px solid #0077B6' : '2px solid transparent',
+                color: activeTab === tab.id ? '#0077B6' : '#64748B',
                 fontWeight: activeTab === tab.id ? 700 : 500,
-                fontSize: 13, cursor: 'pointer',
+                fontSize: 13.5, cursor: 'pointer',
                 transition: 'all 0.2s',
                 borderRadius: '8px 8px 0 0',
-                display: 'flex', alignItems: 'center', gap: 6,
+                display: 'flex', alignItems: 'center', gap: 8,
+                boxShadow: activeTab === tab.id ? '0 -2px 8px rgba(0,0,0,0.02)' : 'none'
               }}
             >
-              <span>{tab.icon}</span> {tab.label}
+              <span style={{ fontSize: 16 }}>{tab.icon}</span> {tab.label}
             </button>
           ))}
         </div>
@@ -94,27 +128,37 @@ export default function SkillsPage() {
           {activeTab === 'registry' && (
             <div>
               {/* Functional Skills */}
-              <section style={{ marginBottom: 32 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                  <h2 style={{ fontSize: 15, fontWeight: 600 }}>Functional Skills (F)</h2>
-                  <span className="badge badge-teal">Composite Orchestrations</span>
+              <section style={{ marginBottom: 36 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 700, color: '#03045E' }}>Functional Skills (F)</h2>
+                  <span className="badge" style={{ background: '#E0F2FE', color: '#0369A1', fontSize: 11, fontWeight: 600 }}>Composite Orchestrations</span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {functionalSkills.map(skill => (
-                    <SkillCard key={skill.id} skill={skill} />
+                    <SkillCard 
+                      key={skill.id} 
+                      skill={skill} 
+                      isActive={skillStates[skill.id]} 
+                      onToggle={(state) => toggleSkillState(skill.id, state)} 
+                    />
                   ))}
                 </div>
               </section>
 
               {/* Base Skills */}
               <section>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                  <h2 style={{ fontSize: 15, fontWeight: 600 }}>Base Skills (B)</h2>
-                  <span className="badge badge-blue">Atomic Primitives</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 700, color: '#03045E' }}>Base Skills (B)</h2>
+                  <span className="badge" style={{ background: '#F1F5F9', color: '#475569', fontSize: 11, fontWeight: 600 }}>Atomic Primitives</span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {baseSkills.map(skill => (
-                    <SkillCard key={skill.id} skill={skill} />
+                    <SkillCard 
+                      key={skill.id} 
+                      skill={skill} 
+                      isActive={skillStates[skill.id]} 
+                      onToggle={(state) => toggleSkillState(skill.id, state)} 
+                    />
                   ))}
                 </div>
               </section>
@@ -123,11 +167,11 @@ export default function SkillsPage() {
 
           {/* Sandbox Tab */}
           {activeTab === 'sandbox' && (
-            <div>
+            <div style={{ background: '#FFFFFF', padding: 24, borderRadius: 16, border: '1px solid #E2E8F0' }}>
               <div style={{ marginBottom: 16 }}>
-                <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Skill Sandbox</h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                  Test skill execution safely with mock wrappers. Select a skill, edit the payload, and execute.
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: '#03045E', marginBottom: 4 }}>Skill Sandbox Payload Runner</h2>
+                <p style={{ color: '#64748B', fontSize: 12.5 }}>
+                  Test skill execution safely with direct input simulation. Select a registered skill, input parameters, and trigger real-time evaluation.
                 </p>
               </div>
               <SkillSandbox />
@@ -136,11 +180,11 @@ export default function SkillsPage() {
 
           {/* Guardrails Tab */}
           {activeTab === 'guardrails' && (
-            <div>
+            <div style={{ background: '#FFFFFF', padding: 24, borderRadius: 16, border: '1px solid #E2E8F0' }}>
               <div style={{ marginBottom: 16 }}>
-                <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Guardrail Editor</h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                  Toggle skills on/off. Disabled skills return 403 — the LLM cannot bypass this gate.
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: '#03045E', marginBottom: 4 }}>Global Guardrail Gatekeeper</h2>
+                <p style={{ color: '#64748B', fontSize: 12.5 }}>
+                  Administer platform-wide restrictions. Disabled boundaries immediately prevent autonomous API dispatch.
                 </p>
               </div>
               <GuardrailEditor />
@@ -149,11 +193,11 @@ export default function SkillsPage() {
 
           {/* Audit Log Tab */}
           {activeTab === 'audit' && (
-            <div>
+            <div style={{ background: '#FFFFFF', padding: 24, borderRadius: 16, border: '1px solid #E2E8F0' }}>
               <div style={{ marginBottom: 16 }}>
-                <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Execution Audit Log</h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                  Full audit trail of every skill execution. Auto-refreshes every 5 seconds. Click to expand details.
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: '#03045E', marginBottom: 4 }}>Autonomous Execution Telemetry</h2>
+                <p style={{ color: '#64748B', fontSize: 12.5 }}>
+                  Immutable event stream logging tool execution parameters, timestamps, and return codes automatically.
                 </p>
               </div>
               <ExecutionLogViewer />
@@ -166,57 +210,135 @@ export default function SkillsPage() {
   )
 }
 
-// ─── Skill Card Component ─────────────────────────────────────────────
-function SkillCard({ skill }) {
+// ─── Universal Interactive Skill Card Component ─────────────────────────────────────────────
+function SkillCard({ skill, isActive, onToggle }) {
   return (
     <div style={{
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--radius-sm)',
-      padding: '16px 20px',
-      display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16,
+      background: isActive ? '#FFFFFF' : '#FAFAFA',
+      border: `1px solid ${isActive ? '#E2E8F0' : '#E5E7EB'}`,
+      borderRadius: '14px',
+      padding: '20px 24px',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20,
+      boxShadow: isActive ? '0 4px 16px rgba(3, 4, 94, 0.04)' : 'none',
+      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+      opacity: isActive ? 1 : 0.75,
+      position: 'relative',
+      overflow: 'hidden'
     }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>{skill.label}</span>
+      {/* Accent pill indicator strip on left border */}
+      <div style={{
+        position: 'absolute',
+        left: 0, top: 0, bottom: 0, width: 4,
+        background: isActive ? (skill.type === 'functional' ? '#0EA5E9' : '#0077B6') : '#CBD5E1',
+        transition: 'background 0.2s'
+      }} />
+
+      <div style={{ flex: 1, marginLeft: 6 }}>
+        {/* Top line: Name, Code, Status badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+          <span style={{ fontWeight: 700, fontSize: 15.5, color: isActive ? '#03045E' : '#64748B' }}>
+            {skill.label}
+          </span>
           <code style={{
-            fontSize: 11, color: 'var(--text-muted)',
-            background: 'var(--bg-elevated)', padding: '1px 7px', borderRadius: 4,
+            fontSize: 11, color: '#475569', fontWeight: 600,
+            background: '#F1F5F9', padding: '2px 8px', borderRadius: 6,
+            border: '1px solid #E2E8F0'
           }}>
             {skill.id}
           </code>
-          {skill.type === 'functional' && (
-            <span className="badge badge-teal" style={{ fontSize: 9 }}>FUNCTIONAL</span>
-          )}
+          <span className={`badge ${isActive ? 'badge-green' : 'badge-slate'}`} style={{ fontSize: 10, padding: '2px 8px' }}>
+            {isActive ? '● ENABLED' : '○ MUTED'}
+          </span>
         </div>
-        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>
+
+        {/* Small description */}
+        <p style={{ fontSize: 13, color: '#475569', marginBottom: 12, lineHeight: 1.5, maxWidth: '92%' }}>
           {skill.description}
         </p>
-        {/* Composes line for functional skills */}
-        {skill.composes && (
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
-            Composes: {skill.composes.map((c, i) => (
-              <code key={c} style={{ color: 'var(--accent-primary)', background: 'var(--accent-glow)', padding: '1px 6px', borderRadius: 4, marginLeft: i > 0 ? 4 : 0 }}>
-                {c}
-              </code>
+
+        {/* Flow below the name of the skills */}
+        {skill.flow && (
+          <div style={{ 
+            display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, 
+            marginBottom: 12, padding: '6px 12px', background: '#F8FAFC', 
+            borderRadius: 8, border: '1px solid #F1F5F9', width: 'fit-content'
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#0284C7', textTransform: 'uppercase', letterSpacing: '0.5px', marginRight: 4 }}>
+              Execution Flow:
+            </span>
+            {skill.flow.map((step, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ 
+                  fontSize: 11.5, fontWeight: 600, color: '#0F172A', 
+                  background: '#FFFFFF', padding: '2px 8px', borderRadius: 4,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)', border: '1px solid #E2E8F0'
+                }}>
+                  {step}
+                </span>
+                {idx < skill.flow.length - 1 && (
+                  <span style={{ color: '#94A3B8', fontWeight: 700, fontSize: 12 }}>→</span>
+                )}
+              </div>
             ))}
           </div>
         )}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          {skill.params.map(p => (
-            <code key={p} style={{
-              fontSize: 10, color: 'var(--accent-primary)',
-              background: 'var(--accent-glow)', padding: '1px 7px',
-              borderRadius: 4, border: '1px solid rgba(0,119,182,0.12)',
-            }}>
-              {p}
-            </code>
-          ))}
+
+      </div>
+
+      {/* On / Off Button Toggle Switch area */}
+      <div style={{ 
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 
+      }}>
+        <span style={{ fontSize: 10.5, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Skill State
+        </span>
+        
+        {/* Button pill selector group where clicking anywhere toggles the state */}
+        <div 
+          onClick={() => onToggle(!isActive)}
+          style={{
+            display: 'flex',
+            background: '#F1F5F9',
+            padding: 3,
+            borderRadius: '10px',
+            border: '1px solid #E2E8F0',
+            cursor: 'pointer',
+            userSelect: 'none'
+          }}
+          title="Click anywhere to toggle state"
+        >
+          <div
+            style={{
+              padding: '6px 14px',
+              background: isActive ? '#10B981' : 'transparent',
+              color: isActive ? '#FFFFFF' : '#64748B',
+              fontWeight: 700,
+              fontSize: 12,
+              borderRadius: '8px',
+              transition: 'all 0.2s',
+              boxShadow: isActive ? '0 2px 6px rgba(16, 185, 129, 0.25)' : 'none',
+              pointerEvents: 'none'
+            }}
+          >
+            ON
+          </div>
+          <div
+            style={{
+              padding: '6px 14px',
+              background: !isActive ? '#EF4444' : 'transparent',
+              color: !isActive ? '#FFFFFF' : '#64748B',
+              fontWeight: 700,
+              fontSize: 12,
+              borderRadius: '8px',
+              transition: 'all 0.2s',
+              boxShadow: !isActive ? '0 2px 6px rgba(239, 68, 68, 0.25)' : 'none',
+              pointerEvents: 'none'
+            }}
+          >
+            OFF
+          </div>
         </div>
       </div>
-      <span className="badge badge-green" style={{ whiteSpace: 'nowrap' }}>
-        ✓ Implemented
-      </span>
     </div>
   )
 }
