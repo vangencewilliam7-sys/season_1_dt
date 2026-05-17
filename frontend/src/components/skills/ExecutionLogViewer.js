@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { SkillsService } from '../../lib/api/services/SkillsService'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
 
@@ -10,8 +11,7 @@ export default function ExecutionLogViewer() {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch(`${API_BASE}/admin/logs`)
-      const data = await res.json()
+      const data = await SkillsService.getLogs()
       setLogs(data)
     } catch (err) {
       console.error("Failed to fetch logs", err)

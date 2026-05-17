@@ -14,7 +14,7 @@ export default function GlassBoxPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC', fontFamily: 'var(--font-sans), Inter, system-ui, sans-serif' }}>
       <Sidebar active="/glass-box" />
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         
         {/* Header */}
         <div style={{
@@ -36,7 +36,7 @@ export default function GlassBoxPage() {
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '32px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '32px' }}>
           {traces.length === 0 ? (
             <div style={{
               textAlign: 'center', padding: '60px 20px',
@@ -59,7 +59,8 @@ export default function GlassBoxPage() {
                     borderRadius: '20px',
                     padding: '32px',
                     boxShadow: '0 4px 24px rgba(15, 23, 42, 0.04)',
-                    overflowX: 'auto'
+                    overflowX: 'auto',
+                    maxWidth: '100%'
                   }}>
                     {/* Trace Metadata */}
                     <div style={{
@@ -77,13 +78,13 @@ export default function GlassBoxPage() {
                     </div>
 
                     {/* ── SIDEWAYS HIERARCHY GRAPH (LEFT-TO-RIGHT) ── */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 0, minWidth: '1500px', padding: '20px 0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 0, minWidth: '1100px', padding: '20px 0' }}>
                       
                       {/* COLUMN 1: TRIGGER NODE */}
                       <div style={{
                         background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px',
-                        padding: '16px 20px', width: '220px', minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)', position: 'relative'
+                        padding: '16px 20px', width: '180px', minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)', position: 'relative', flexShrink: 0
                       }}>
                         <div style={{ fontSize: 13, color: '#0F172A', fontWeight: 700, marginBottom: 8 }}>Trigger Query</div>
                         <div style={{ 
@@ -105,7 +106,7 @@ export default function GlassBoxPage() {
                       </svg>
 
                       {/* COLUMN 2: RETRIEVAL FORKS */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 40, width: '240px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 40, width: '200px', flexShrink: 0 }}>
                         {/* TOP FORK: VERIFIED CASES */}
                         <div style={{
                           background: '#FFFFFF', border: '1px solid #E2E8F0',
@@ -155,8 +156,8 @@ export default function GlassBoxPage() {
                       {/* COLUMN 3: REASONING ENGINE */}
                       <div style={{
                         background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px',
-                        padding: '16px 20px', width: '280px', minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)'
+                        padding: '16px 20px', width: '220px', minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)', flexShrink: 0
                       }}>
                         <div style={{ fontSize: 13, color: '#0F172A', fontWeight: 700, marginBottom: 8 }}>Chain of Thought</div>
                         <div style={{ 
@@ -178,8 +179,8 @@ export default function GlassBoxPage() {
                       {/* COLUMN 4: GENERATION */}
                       <div style={{
                         background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px',
-                        padding: '24px', width: '750px', minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)'
+                        padding: '24px', width: '450px', minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)', flexShrink: 0
                       }}>
                         <div style={{ fontSize: 13, color: '#0F172A', fontWeight: 700, marginBottom: 8 }}>Final Output</div>
                         <div style={{ 

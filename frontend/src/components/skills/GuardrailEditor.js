@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { SkillsService } from '../../lib/api/services/SkillsService'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
 
@@ -13,8 +14,7 @@ export default function GuardrailEditor() {
 
   const fetchSkills = async () => {
     try {
-      const res = await fetch(`${API_BASE}/admin/skills`)
-      const data = await res.json()
+      const data = await SkillsService.getAdminSkills()
       setSkills(data)
     } catch (err) {
       console.error("Failed to fetch skills", err)
@@ -25,11 +25,8 @@ export default function GuardrailEditor() {
 
   const toggleSkill = async (skillName) => {
     try {
-      const res = await fetch(`${API_BASE}/admin/skills/${skillName}/toggle`, {
-        method: 'POST'
-      })
-      const data = await res.json()
-      setSkills(skills.map(s => s.skill_name === skillName ? { ...s, is_active: data.is_active } : s))
+      await SkillsService.toggleSkill(skillName)
+      fetchSkills()
     } catch (err) {
       console.error("Failed to toggle skill", err)
     }

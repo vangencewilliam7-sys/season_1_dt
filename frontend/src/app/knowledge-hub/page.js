@@ -2,8 +2,10 @@
 import Sidebar from '../../components/layout/Sidebar'
 import { useState, useEffect } from 'react'
 import { WordLogo, PdfLogo, LockIcon, UnlockIcon } from '../../components/ui/DocLogos'
+import { KnowledgeHubService } from '../../lib/api/services/KnowledgeHubService'
 
 export default function KnowledgeHubPage() {
+  const [activeTab, setActiveTab] = useState('base')
   const [files, setFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -69,18 +71,16 @@ export default function KnowledgeHubPage() {
     if (documentId && !fileStates[documentId] && !loadingStates[documentId]) {
       setLoadingStates(prev => ({ ...prev, [documentId]: true }))
       try {
-        const [stateRes, infoRes] = await Promise.all([
-          fetch(`http://localhost:8000/api/state/${documentId}`),
-          fetch(`http://localhost:8000/api/file-info/${documentId}`)
+        const [stateData, infoData] = await Promise.all([
+          KnowledgeHubService.getDocumentState(documentId),
+          KnowledgeHubService.getDocumentInfo(documentId)
         ])
 
-        if (stateRes.ok) {
-          const data = await stateRes.json()
-          setFileStates(prev => ({ ...prev, [documentId]: data }))
+        if (stateData) {
+          setFileStates(prev => ({ ...prev, [documentId]: stateData }))
         }
 
-        if (infoRes.ok) {
-          const infoData = await infoRes.json()
+        if (infoData) {
           setFileInfos(prev => ({ ...prev, [documentId]: infoData }))
         }
       } catch (e) {
@@ -157,17 +157,7 @@ export default function KnowledgeHubPage() {
         formData.append('file', files[i].file)
 
         try {
-          const res = await fetch('http://127.0.0.1:8000/api/ingest', {
-            method: 'POST',
-            body: formData,
-          })
-
-          if (!res.ok) {
-            const errorData = await res.json()
-            throw new Error(errorData.detail || 'Upload failed')
-          }
-
-          const data = await res.json()
+          const data = await KnowledgeHubService.ingestDocument(formData);
 
           setFiles(prev => prev.map((f, index) =>
             index === i ? {
@@ -198,9 +188,7 @@ export default function KnowledgeHubPage() {
     setExtractedCases([])
 
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/state/${file.document_id}`)
-      if (!res.ok) throw new Error("Failed to fetch LangGraph state")
-      const data = await res.json()
+      const data = await KnowledgeHubService.getDocumentState(file.document_id);
       setScenarios(data.synthetic_scenarios || [])
       setExtractedCases(data.parsed_cases || [])
     } catch (e) {
@@ -221,10 +209,7 @@ export default function KnowledgeHubPage() {
     }
 
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/commit?scenario_id=${scenario_id}&expert_decision=${encodeURIComponent(decision)}&archetype=Safety`, {
-        method: 'POST'
-      })
-      if (!res.ok) throw new Error("Commit failed")
+      await KnowledgeHubService.commitResolution(scenario_id, decision, 'Safety');
 
       // Mark this scenario as committed (keep it visible but disabled)
       setCommittedScenarios(prev => new Set([...prev, scenario_id]))
@@ -255,8 +240,33 @@ export default function KnowledgeHubPage() {
         <div className="fade-up" style={{ marginBottom: 36 }}>
           <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 4 }}>Knowledge Hub Ingestion</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
-            Upload multiple clinical documents (.pdf or .docx) to batch-process them through the pipeline.
+            Manage and upload source documents and master case references for your Digital Twin.
           </p>
+
+          <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+            <button
+              onClick={() => setActiveTab('base')}
+              style={{
+                background: activeTab === 'base' ? '#F0F9FF' : 'transparent',
+                color: activeTab === 'base' ? '#0077B6' : 'var(--text-secondary)',
+                border: activeTab === 'base' ? '1px solid #90E0EF' : '1px solid transparent',
+                padding: '10px 20px', borderRadius: '99px', fontWeight: 600, fontSize: 14, cursor: 'pointer', transition: 'all 0.2s'
+              }}
+            >
+              📚 Base Knowledge
+            </button>
+            <button
+              onClick={() => setActiveTab('cases')}
+              style={{
+                background: activeTab === 'cases' ? '#FFFBEB' : 'transparent',
+                color: activeTab === 'cases' ? '#D97706' : 'var(--text-secondary)',
+                border: activeTab === 'cases' ? '1px solid #FDE68A' : '1px solid transparent',
+                padding: '10px 20px', borderRadius: '99px', fontWeight: 600, fontSize: 14, cursor: 'pointer', transition: 'all 0.2s'
+              }}
+            >
+              🧠 Master Cases
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -265,7 +275,14 @@ export default function KnowledgeHubPage() {
             background: '#FFFFFF', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
             padding: '32px', width: '100%', boxShadow: 'var(--shadow-card)'
           }}>
-            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 24 }}>Upload Source Material</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
+              {activeTab === 'base' ? 'Upload Source Material' : 'Upload Master Cases'}
+            </h2>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24 }}>
+              {activeTab === 'base' 
+                ? 'Upload your core documentation (SOPs, guidelines, manuals) to build the base knowledge.'
+                : 'Upload curated case files that represent complex, real-world scenarios for the AI to study.'}
+            </p>
 
             <div style={{
               border: '2px dashed var(--border)', borderRadius: 'var(--radius-md)', padding: '40px',
