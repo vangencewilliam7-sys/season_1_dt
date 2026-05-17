@@ -113,3 +113,34 @@ class SupabaseService:
         except Exception as e:
             print(f"Error fetching count for {table}: {e}")
             return 0
+
+    def get_pipeline_status(self, session_id: str) -> str:
+        """Gets the status of the pipeline state for a session."""
+        if not self.client: return "in_progress"
+        try:
+            res = self.client.table("pipeline_state").select("status").eq("document_id", session_id).execute()
+            if res.data:
+                return res.data[0].get("status", "in_progress")
+            return "in_progress"
+        except Exception as e:
+            print(f"Error fetching pipeline status: {e}")
+            return "in_progress"
+
+    def update_pipeline_status(self, session_id: str, status: str):
+        """Updates the status of the pipeline state for a session."""
+        if not self.client: return
+        try:
+            # We must upsert in case the session hasn't been saved yet. But pipeline_state needs a 'state' jsonb.
+            # Usually the checkpointer creates it first. Let's just update for now.
+            res = self.client.table("pipeline_state").select("document_id").eq("document_id", session_id).execute()
+            if res.data:
+                return self.client.table("pipeline_state").update({"status": status}).eq("document_id", session_id).execute()
+            else:
+                # If it doesn't exist, we might have to create a blank state. This is rare unless override triggered before first chat.
+                return self.client.table("pipeline_state").insert({
+                    "document_id": session_id,
+                    "state": {},
+                    "status": status
+                }).execute()
+        except Exception as e:
+            print(f"Error updating pipeline status: {e}")
