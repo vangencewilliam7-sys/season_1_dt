@@ -27,21 +27,26 @@ _SKIP_FILES = {"__init__.py", "base_adapter.py", "domain_router.py"}
 
 def _discover_adapters() -> Dict[str, BaseDomainAdapter]:
     """
-    Scan every .py file in the adapters/ package, import it, and register
-    any class that extends BaseDomainAdapter.
-
-    Returns:
-        Dict mapping "domain:role" keys to adapter instances.
-        Example: {"healthcare:doctor": HealthcareAdapter(), ...}
+    Scan every .py file in the adapters/ package and sub-packages, 
+    import them, and register any class that extends BaseDomainAdapter.
     """
     registry: Dict[str, BaseDomainAdapter] = {}
     pkg_dir = pathlib.Path(__file__).parent
 
-    for py_file in sorted(pkg_dir.glob("*.py")):
+    # Use rglob to find .py files in subfolders
+    for py_file in sorted(pkg_dir.rglob("*.py")):
         if py_file.name in _SKIP_FILES:
             continue
-
-        module = importlib.import_module(f".{py_file.stem}", package=__package__)
+            
+        # Calculate the relative module path (e.g., 'healthcare.doctor')
+        rel_path = py_file.relative_to(pkg_dir)
+        module_name = ".".join(rel_path.with_suffix("").parts)
+        
+        try:
+            module = importlib.import_module(f".{module_name}", package=__package__)
+        except Exception as e:
+            print(f"Failed to import adapter module {module_name}: {e}")
+            continue
 
         for _, cls in inspect.getmembers(module, inspect.isclass):
             if (
@@ -49,9 +54,10 @@ def _discover_adapters() -> Dict[str, BaseDomainAdapter]:
                 and cls is not BaseDomainAdapter
             ):
                 instance = cls()
+                # Key is "domain:role" e.g., "healthcare:doctor"
                 key = (
                     f"{instance.get_domain_name().lower().strip()}"
-                    f":{instance.get_role_name().lower().strip().replace(' ', '_')}"
+                    f":{instance.get_role_name().lower().strip()}"
                 )
                 registry[key] = instance
 

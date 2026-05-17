@@ -8,7 +8,7 @@ Role UUID:    20000000-0000-0000-0000-000000000003  (Tutor)
 
 These UUIDs match the seed data in 04_seed_domains_and_roles.sql.
 """
-from .base_adapter import BaseDomainAdapter
+from ..base_adapter import BaseDomainAdapter
 
 
 class EducationAdapter(BaseDomainAdapter):

@@ -11,7 +11,7 @@ IMPORTANT: This file was created by simply dropping it into adapters/.
 The auto-discovery router registered it automatically — ZERO edits to
 domain_router.py or __init__.py were needed.
 """
-from .base_adapter import BaseDomainAdapter
+from ..base_adapter import BaseDomainAdapter
 
 
 class PreSalesArchitectAdapter(BaseDomainAdapter):
