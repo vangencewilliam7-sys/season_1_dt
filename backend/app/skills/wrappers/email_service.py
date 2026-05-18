@@ -1,7 +1,18 @@
 from app.skills.wrappers.resilience import with_retry, TransientNetworkError, ExternalAPIException
+from app.skills.wrappers.base_wrapper import BaseSkillWrapper
 from typing import Dict, Any
 
-class EmailServiceWrapper:
+class EmailServiceWrapper(BaseSkillWrapper):
+    SKILL_NAMES = ["send_communication"]
+
+    @staticmethod
+    def execute(skill_name: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return EmailServiceWrapper.send_communication(payload)
+
+    @staticmethod
+    def describe_result(skill_name: str, result: Dict[str, Any]) -> str:
+        return "The communication has been sent successfully."
+
     @staticmethod
     @with_retry()
     def send_communication(payload: Dict[str, Any]) -> Dict[str, Any]:

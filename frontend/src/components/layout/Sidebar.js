@@ -13,7 +13,7 @@ import {
 } from '../ui/SparkleIcons'
 
 const NAV = [
-  { href: '/',               label: 'Dashboard',      icon: <DashboardIcon /> },
+  { href: '/dashboard',      label: 'Dashboard',      icon: <DashboardIcon /> },
   { href: '/knowledge-hub',  label: 'Knowledge Hub',  icon: <KnowledgeIcon /> },
   { href: '/persona',        label: 'Persona',        icon: <PersonaIcon /> },
   { href: '/chat',           label: 'Twin Chat',      icon: <ChatIcon /> },
@@ -50,13 +50,16 @@ export default function Sidebar({ active }) {
   return (
     <aside style={{
       width: 240,
-      minHeight: '100vh',
+      height: '100vh',
+      position: 'sticky',
+      top: 0,
       background: '#FFFFFF',
       borderRight: '1px solid #E2E8F0',
       display: 'flex',
       flexDirection: 'column',
       padding: '24px 0',
       flexShrink: 0,
+      overflowY: 'auto'
     }}>
       {/* Logo */}
       <div style={{ padding: '0 20px 32px' }}>
@@ -67,10 +70,10 @@ export default function Sidebar({ active }) {
           borderRadius: '12px',
           boxShadow: '0 4px 16px rgba(3,4,94,0.15)',
         }}>
-          <span style={{ fontSize: 22, filter: 'brightness(10)' }}>⚕</span>
+          <span style={{ fontSize: 22, filter: 'brightness(10)' }}>✨</span>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>Doctor Twin</div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: 600, letterSpacing: '0.5px' }}>SEASON 1 · DT</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>Expert Twin</div>
+
           </div>
         </div>
       </div>
@@ -107,55 +110,77 @@ export default function Sidebar({ active }) {
         })}
       </nav>
 
-      {/* Status dot */}
+      {/* Footer session strip */}
       <div style={{ padding: '16px 20px', borderTop: '1px solid #E2E8F0' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 10,
-        }}>
-          <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600 }}>
-            {userName || 'Guest session'}
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {!userName && (
-              <Link
-                href="/auth/signin"
-                style={{
-                  fontSize: 11,
-                  color: '#0077B6',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                }}
-              >
-                Sign in
-              </Link>
-            )}
+        {userName ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#F8FAFC',
+            padding: '8px 12px',
+            borderRadius: '10px',
+            border: '1px solid #E2E8F0'
+          }}>
+            <div style={{ fontSize: 12.5, color: '#03045E', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 110 }}>
+              {userName}
+            </div>
             <button
               onClick={handleSignOut}
               style={{
                 border: 'none',
-                background: 'transparent',
-                padding: 0,
-                fontSize: 11,
-                color: '#475569',
+                background: '#FEE2E2',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                fontSize: 11.5,
+                color: '#EF4444',
                 fontWeight: 700,
                 cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                transition: 'all 0.2s',
               }}
+              title="Sign out"
             >
-              Sign out
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+              Exit
             </button>
           </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#64748B' }}>
-          <span style={{
-            width: 7, height: 7, borderRadius: '50%',
-            background: '#00B4D8',
-            display: 'inline-block',
-          }}/>
-          Core DT System Active
-        </div>
+        ) : (
+          <button
+            onClick={handleSignOut}
+            style={{
+              width: '100%',
+              border: '1px solid #E2E8F0',
+              background: '#F8FAFC',
+              padding: '10px 16px',
+              borderRadius: '10px',
+              fontSize: 13,
+              color: '#475569',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+            }}
+            title="Sign out session"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Sign out
+          </button>
+        )}
       </div>
     </aside>
   )

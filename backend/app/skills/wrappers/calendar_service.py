@@ -1,7 +1,18 @@
 from app.skills.wrappers.resilience import with_retry, TransientNetworkError, ExternalAPIException
+from app.skills.wrappers.base_wrapper import BaseSkillWrapper
 from typing import Dict, Any
 
-class CalendarServiceWrapper:
+class CalendarServiceWrapper(BaseSkillWrapper):
+    SKILL_NAMES = ["book_appointment"]
+
+    @staticmethod
+    def execute(skill_name: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return CalendarServiceWrapper.book_appointment(payload)
+
+    @staticmethod
+    def describe_result(skill_name: str, result: Dict[str, Any]) -> str:
+        return "Your appointment has been booked successfully."
+
     @staticmethod
     @with_retry()
     def book_appointment(payload: Dict[str, Any]) -> Dict[str, Any]:

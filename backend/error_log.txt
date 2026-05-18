@@ -1,0 +1,61 @@
+
+--- ERROR at 2026-05-15 13:42:33.393428 ---
+Traceback (most recent call last):
+  File "C:\Users\harin\Downloads\season_1_dt\backend\app\api\chat.py", line 86, in chat_message
+    result_state_dict = await asyncio.to_thread(
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\asyncio\threads.py", line 25, in to_thread
+    return await loop.run_in_executor(None, func_call)
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\pregel\main.py", line 3365, in invoke
+    for chunk in self.stream(
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\pregel\main.py", line 2759, in stream
+    for _ in runner.tick(
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\pregel\_runner.py", line 167, in tick
+    run_with_retry(
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\pregel\_retry.py", line 126, in run_with_retry
+    return task.proc.invoke(task.input, config)
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\_internal\_runnable.py", line 656, in invoke
+    input = context.run(step.invoke, input, config, **kwargs)
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\_internal\_runnable.py", line 400, in invoke
+    ret = self.func(*args, **kwargs)
+  File "C:\Users\harin\Downloads\season_1_dt\backend\app\graph\nodes\chat_nodes.py", line 16, in retrieve_context_node
+    results = db.expert_vault_search(
+  File "C:\Users\harin\Downloads\season_1_dt\backend\app\services\supabase_client.py", line 62, in expert_vault_search
+    response = query.execute()
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\postgrest\_sync\request_builder.py", line 127, in execute
+    raise APIError(r.json())
+postgrest.exceptions.APIError: {'code': 'PGRST202', 'details': 'Searched for the function public.match_expert_dna with parameters match_count, match_threshold, p_domain_id, p_workflow_id, query_embedding or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.', 'hint': 'Perhaps you meant to call the function public.match_expert_dna(match_count, match_threshold, query_embedding)', 'message': 'Could not find the function public.match_expert_dna(match_count, match_threshold, p_domain_id, p_workflow_id, query_embedding) in the schema cache'}
+
+--- ERROR at 2026-05-18 13:52:34.243105 ---
+Traceback (most recent call last):
+  File "C:\Users\harin\Downloads\season_1_dt\backend\app\api\chat.py", line 125, in chat_message
+    result_state_dict = await asyncio.to_thread(
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\asyncio\threads.py", line 25, in to_thread
+    return await loop.run_in_executor(None, func_call)
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\pregel\main.py", line 3365, in invoke
+    for chunk in self.stream(
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\pregel\main.py", line 2759, in stream
+    for _ in runner.tick(
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\pregel\_runner.py", line 167, in tick
+    run_with_retry(
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\pregel\_retry.py", line 126, in run_with_retry
+    return task.proc.invoke(task.input, config)
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\_internal\_runnable.py", line 658, in invoke
+    input = step.invoke(input, config)
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\_internal\_runnable.py", line 400, in invoke
+    ret = self.func(*args, **kwargs)
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\graph\_branch.py", line 155, in _route
+    value = reader(config)
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\pregel\_read.py", line 87, in do_read
+    return mapper(read(select, fresh))
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\langgraph\graph\state.py", line 1534, in _coerce_state
+    return schema(**input)
+  File "C:\Users\harin\AppData\Local\Programs\Python\lib\site-packages\pydantic\main.py", line 209, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 1 validation error for ChatState
+accumulated_evidence
+  Input should be a valid dictionary [type=dict_type, input_value=[{'chest_pain': 'feels li...ty': 'hard to breathe'}], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.9/v/dict_type

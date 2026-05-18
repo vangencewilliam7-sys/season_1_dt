@@ -1,12 +1,19 @@
 from dotenv import load_dotenv
-load_dotenv()  # Load .env FIRST — before any service imports that read os.environ
+load_dotenv(override=True)  # Force .env priority over broken OS variables
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from .api import ingest, query, chat, stats
+from .api import ingest, query, chat, stats, patients
 import os
 from contextlib import asynccontextmanager
+import logging
+
+class EndpointFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.getMessage().find("/api/chat/history") == -1
+
+logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 # Skills Layer Imports
 from .skills.api.routes import router as skills_router
@@ -51,6 +58,7 @@ app.include_router(ingest.router, prefix="/api", tags=["Ingestion"])
 app.include_router(query.router, prefix="/api", tags=["Query"])
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(stats.router, prefix="/api", tags=["Stats"])
+app.include_router(patients.router, prefix="/api/patients", tags=["Patients"])
 
 # Skills Layer Routers (B&F Skills — Base + Functional)
 app.include_router(skills_router, prefix="/skills", tags=["Skills Execution"])

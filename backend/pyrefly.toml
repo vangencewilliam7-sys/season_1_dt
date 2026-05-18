@@ -1,0 +1,4 @@
+[tool.pyrefly]
+search_path = ["."]
+python_version = "3.10"
+python_platform = "windows"

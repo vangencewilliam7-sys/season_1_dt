@@ -3,23 +3,20 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '../../components/layout/Sidebar'
 import { getSupabaseClient, hasSupabaseConfig } from '../../lib/supabase'
+import { ChatService } from '../../lib/api/services/ChatService'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
 
 export default function ChatPage() {
   const router = useRouter()
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: "Hello. I'm Dr. [Expert]'s Digital Twin. I can answer questions grounded in verified clinical decisions and documented protocols. How can I help you today?",
-      confidence: 0.97,
-      mode: 'primary',
-      sources: [],
-    }
-  ])
+  const [messages, setMessages] = useState([])
   const [hasHydrated, setHasHydrated] = useState(false)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isOverride, setIsOverride] = useState(false)
+  const [sessionId, setSessionId] = useState('demo-session')
+  const [domain, setDomain] = useState('education')
+  const [role, setRole] = useState('tutor')
   const bottomRef = useRef(null)
   const fileInputRef = useRef(null)
 
@@ -49,23 +46,69 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('twin_chat_messages')
-    if (saved) {
+    let sId = 'demo-session'
+    let dom = 'education'
+    let rol = 'tutor'
+    
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      sId = params.get('session_id') || 'demo-session'
+      dom = params.get('domain') || 'education'
+      rol = params.get('role') || 'tutor'
+      setSessionId(sId)
+      setDomain(dom)
+      setRole(rol)
+    }
+
+    async function initialFetch() {
       try {
-        setMessages(JSON.parse(saved))
+        const data = await ChatService.getHistory(sId)
+        if (data && data.messages && data.messages.length > 0) {
+          setMessages(data.messages)
+        } else {
+          setMessages([
+            {
+              role: 'assistant',
+              content: dom === 'healthcare'
+                ? "Hello. I'm the Expert Digital Twin. I can answer questions grounded in verified professional decisions and clinical RAG protocols. How can I help you triage today?"
+                : "Hello. I'm the Expert Digital Twin. I can answer questions grounded in verified professional decisions and documented protocols. How can I help you today?",
+              confidence: 0.97,
+              mode: 'primary',
+              sources: [],
+            }
+          ])
+        }
+        if (data && data.status) {
+          setIsOverride(data.status === 'human_intervention')
+        }
       } catch (e) {
-        console.error("Failed to parse saved messages", e)
+        console.error("Failed to fetch history", e)
       }
     }
+
+    initialFetch()
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await ChatService.getHistory(sId)
+        if (data && data.messages && data.messages.length > 0) {
+          setMessages(data.messages)
+        }
+        if (data && data.status) {
+          setIsOverride(data.status === 'human_intervention')
+        }
+      } catch (e) {
+        console.error("Failed polling history:", e)
+      }
+    }, 2500)
+
     setHasHydrated(true)
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
-    if (hasHydrated) {
-      sessionStorage.setItem('twin_chat_messages', JSON.stringify(messages))
-    }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, hasHydrated])
+  }, [messages])
 
   async function handleSignOut() {
     if (hasSupabaseConfig) {
@@ -78,52 +121,57 @@ export default function ChatPage() {
 
   async function sendMessage() {
     if (!input.trim() || loading) return
-    const userMsg = { role: 'user', content: input }
-    setMessages(prev => [...prev, userMsg])
+    const currentInput = input
     setInput('')
     setLoading(true)
 
     try {
-      const res = await fetch(`${API}/api/chat/message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expert_id: 'demo', message: input, session_id: 'demo-session' }),
-      })
-      const data = await res.json()
-      const assistantMessage = {
-        role: 'assistant',
-        content: data.response || 'No response received.',
-        confidence: data.confidence,
-        mode: data.persona_mode,
-        sources: data.sources || [],
-        rationale: data.rationale,
-        intent_type: data.intent_type,
-        skill_result: data.skill_result,
-        skill_status: data.skill_status,
-        detected_skill: data.detected_skill,
-        extracted_params: data.extracted_params
-      }
-      setMessages(prev => [...prev, assistantMessage])
+      if (isOverride) {
+        // Human Intervention Mode: Send expert message directly to the backend
+        await ChatService.sendExpertMessage({
+          expert_id: 'demo',
+          message: currentInput,
+          session_id: sessionId,
+          domain: domain,
+          role: role
+        });
+      } else {
+        // Normal Twin Mode
+        const data = await ChatService.sendMessage({ 
+          expert_id: 'demo', 
+          message: currentInput, 
+          session_id: sessionId, 
+          domain: domain, 
+          role: role 
+        });
 
-      // Log trace to localStorage for the Glass Box page
-      if (data.rationale) {
-        const trace = {
-          id: Math.random().toString(36).substr(2, 9),
-          query: input,
-          rationale: data.rationale,
-          response: data.response,
-          sources: data.sources,
-          confidence: data.confidence,
-          latency: data.latency_ms,
-          timestamp: new Date().toISOString()
+        // Log trace to localStorage for the Glass Box page
+        if (data.rationale) {
+          const trace = {
+            id: Math.random().toString(36).substr(2, 9),
+            query: currentInput,
+            rationale: data.rationale,
+            response: data.response,
+            sources: data.sources,
+            confidence: data.confidence,
+            latency: data.latency_ms,
+            timestamp: new Date().toISOString()
+          }
+          const existing = JSON.parse(localStorage.getItem('glass_box_traces') || '[]')
+          localStorage.setItem('glass_box_traces', JSON.stringify([trace, ...existing]))
         }
-        const existing = JSON.parse(localStorage.getItem('glass_box_traces') || '[]')
-        localStorage.setItem('glass_box_traces', JSON.stringify([trace, ...existing]))
+      } // end if (isOverride) else
+      
+      // Instantly refresh history to show sent messages immediately
+      const res = await ChatService.getHistory(sessionId)
+      if (res && res.messages) {
+        setMessages(res.messages)
       }
     } catch {
+      // If endpoint is offline, show fallback
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: '⚠ Chat endpoint not yet connected. Build Phase 5 to enable this.',
+        content: '⚠ Chat endpoint offline or connection error.',
         confidence: null,
         mode: 'offline',
         sources: [],
@@ -132,6 +180,7 @@ export default function ChatPage() {
       setLoading(false)
     }
   }
+
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
@@ -148,12 +197,56 @@ export default function ChatPage() {
           boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
         }}>
           <div>
-            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Twin Chat</h1>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-              Expert: Fertility Specialist · Domain: Healthcare
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Twin Chat</h1>            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, textTransform: 'capitalize' }}>
+              Expert: Principal Specialist · Domain: {domain} ({role})
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '16px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: isOverride ? '#0D9488' : 'var(--text-secondary)' }}>
+                {isOverride ? '🔴 ACTIVE OVERRIDE' : 'TWIN AUTOPILOT'}
+              </span>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <div style={{ position: 'relative' }}>
+                  <input type="checkbox" className="sr-only" checked={isOverride} onChange={async (e) => {
+                    const active = e.target.checked;
+                    setIsOverride(active);
+                    try {
+                      await ChatService.setOverride({ session_id: sessionId, active });
+                    } catch(err) { console.error("Override failed", err); }
+                  }} style={{ display: 'none' }} />
+                  <div style={{
+                    width: '40px', height: '24px', backgroundColor: isOverride ? '#0D9488' : '#E5E7EB',
+                    borderRadius: '9999px', transition: 'background-color 0.2s',
+                    boxShadow: isOverride ? '0 0 10px #0D9488' : 'none'
+                  }}></div>
+                  <div style={{
+                    position: 'absolute', top: '2px', left: isOverride ? '18px' : '2px',
+                    width: '20px', height: '20px', backgroundColor: 'white',
+                    borderRadius: '50%', transition: 'left 0.2s'
+                  }}></div>
+                </div>
+              </label>
+            </div>
+            <button
+              onClick={() => window.open(`/portal?session_id=${sessionId}&domain=${domain}&role=${role}`, '_blank')}
+              style={{
+                border: '1px solid #BFDBFE',
+                background: '#EFF6FF',
+                color: '#1E40AF',
+                borderRadius: '999px',
+                fontSize: 12,
+                fontWeight: 700,
+                padding: '8px 14px',
+                cursor: 'pointer',
+                marginRight: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              🌐 Open Patient Portal
+            </button>
             <span className="badge badge-teal">RAG Active</span>
             <span className="badge badge-blue">HIPAA Mode</span>
             <button
@@ -190,7 +283,7 @@ export default function ChatPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 16,
               }}>
-                {msg.role === 'user' ? '👤' : '⚕️'}
+                {msg.role === 'user' ? '👤' : '✨'}
               </div>
 
               {/* Bubble */}
@@ -214,16 +307,16 @@ export default function ChatPage() {
                         {msg.skill_status}
                       </span>
                     </div>
-                    
+
                     <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                      <strong>Skill:</strong> {msg.detected_skill}<br/>
+                      <strong>Skill:</strong> {msg.detected_skill}<br />
                       {msg.extracted_params && Object.keys(msg.extracted_params).length > 0 && (
-                        <><strong>Params:</strong> {JSON.stringify(msg.extracted_params)}<br/></>
+                        <><strong>Params:</strong> {JSON.stringify(msg.extracted_params)}<br /></>
                       )}
                     </div>
-                    
-                    <div style={{ 
-                      paddingTop: '12px', 
+
+                    <div style={{
+                      paddingTop: '12px',
                       borderTop: `1px solid ${msg.skill_status === 'DISABLED' ? '#FECACA' : (msg.skill_status === 'NOT_REGISTERED' ? '#FDE68A' : '#99F6E4')}`,
                       whiteSpace: 'pre-wrap'
                     }}>
@@ -256,7 +349,7 @@ export default function ChatPage() {
                       )}
                       {msg.mode && (
                         <span className={`badge ${msg.mode === 'primary' ? 'badge-teal' : 'badge-amber'}`}>
-                          {msg.mode === 'primary' ? '⚕ Expert Voice' : '◎ Deputy Mode'}
+                          {msg.mode === 'primary' ? '✨ Expert Voice' : '◎ Deputy Mode'}
                         </span>
                       )}
                       {msg.sources?.length > 0 && (
@@ -275,20 +368,20 @@ export default function ChatPage() {
                 width: 38, height: 38, borderRadius: 'var(--radius-sm)',
                 background: '#F0FDFA', border: '2px solid #99F6E4',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
-              }}>⚕️</div>
+              }}>✨</div>
               <div style={{
                 padding: '14px 22px', borderRadius: '4px 18px 18px 18px',
                 background: '#FFFFFF', border: '1px solid var(--border)',
                 display: 'flex', gap: 5, alignItems: 'center',
                 boxShadow: 'var(--shadow-card)',
               }}>
-                {[0,1,2].map(d => (
+                {[0, 1, 2].map(d => (
                   <span key={d} style={{
                     width: 8, height: 8, borderRadius: '50%',
                     background: 'var(--accent-primary)',
                     animation: `blink 1.2s ease ${d * 0.2}s infinite`,
                     display: 'inline-block',
-                  }}/>
+                  }} />
                 ))}
               </div>
             </div>
@@ -297,10 +390,17 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
+        {isOverride && (
+          <div style={{ padding: '8px 28px', background: '#F0FDFA', borderTop: '1px solid #99F6E4', fontSize: '12px', color: '#0F766E', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="spinner" style={{ width: '12px', height: '12px', borderTopColor: '#0F766E' }}></div>
+            Twin is actively listening and extracting logic from your manual intervention...
+          </div>
+        )}
         <div style={{
           padding: '16px 28px',
           borderTop: '1px solid var(--border)',
-          background: '#FFFFFF',
+          background: isOverride ? '#F8FAFC' : '#FFFFFF',
+          transition: 'background-color 0.2s'
         }}>
           <div style={{ display: 'flex', gap: 10 }}>
             <input
@@ -329,11 +429,11 @@ export default function ChatPage() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-              placeholder="Ask the Doctor Twin a clinical question..."
+              placeholder={isOverride ? "Direct message to user (Bypassing Twin)..." : "Ask the Expert Twin a professional question..."}
               style={{
                 flex: 1, padding: '13px 18px',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
+                background: isOverride ? '#FFFFFF' : 'var(--bg-elevated)',
+                border: isOverride ? '2px solid #0D9488' : '1px solid var(--border)',
                 borderRadius: 'var(--radius-md)',
                 color: 'var(--text-primary)',
                 fontSize: 14, outline: 'none',
@@ -359,7 +459,7 @@ export default function ChatPage() {
             </button>
           </div>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
-            Responses are grounded in verified Master Cases. HIPAA-compliant. Not a substitute for clinical consultation.
+            Responses are grounded in verified Master Cases. Secure & Confidential. Not a substitute for primary consultation.
           </p>
         </div>
       </main>

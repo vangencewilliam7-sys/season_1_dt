@@ -33,76 +33,77 @@ _DEFAULT_THRESHOLD = 0.75
 @tool
 def retrieve_expert_knowledge(
     query: str,
-    domain: str,
+    domain_id: str,
+    role_name: str,
     persona_clearance: str
 ) -> dict:
     """
     Retrieve the most relevant human-verified expert decision from the Logic Vault.
 
     Searches ONLY the expert_dna table (high-purity, human-approved records).
-    Raw document_chunks are never used for production answers.
+    Results are filtered by domain_id FK — no cross-twin contamination possible.
 
     Args:
-        query:             Patient question or clinical scenario.
-        domain:            Industry domain filter e.g. 'fertility', 'legal'.
-        persona_clearance: Requester role e.g. 'doctor', 'nurse', 'patient'.
+        query:             User question or scenario description.
+        domain_id:         UUID FK from the `domains` table (from the active adapter).
+        role_name:         Human-readable role name for logging (e.g., 'Doctor').
+        persona_clearance: Requester role for threshold tuning (e.g., 'doctor', 'patient').
 
     Returns:
         Plain dict with: found, expert_decision, impact_archetype,
-        similarity, reasoning, domain, message.
+        similarity, reasoning, domain_id, role_name, message.
     """
     try:
         query_vector = _embedder.get_embedding(query)
         threshold = _CLEARANCE_THRESHOLDS.get(persona_clearance.lower(), _DEFAULT_THRESHOLD)
 
-        results = _db.expert_vault_search(query_vector, limit=3)
-
-        # Filter by domain
-        if domain:
-            results = [
-                r for r in results
-                if r.get("industry", "").lower() == domain.lower()
-            ]
+        # Pass domain_id FK — deterministic filter, not a text match
+        results = _db.expert_vault_search(query_vector, domain_id=domain_id, limit=3)
 
         # Apply clearance-based threshold
         results = [r for r in results if r.get("similarity", 0) >= threshold]
 
         if not results:
             return {
-                "found": False,
-                "expert_decision": None,
+                "found":            False,
+                "expert_decision":  None,
                 "impact_archetype": None,
-                "similarity": 0.0,
-                "reasoning": None,
-                "domain": domain,
+                "similarity":       0.0,
+                "reasoning":        None,
+                "domain_id":        domain_id,
+                "role_name":        role_name,
                 "message": (
-                    f"No verified expert logic found for domain='{domain}' "
-                    f"above threshold={threshold} (clearance='{persona_clearance}'). "
+                    f"No verified expert logic found for domain_id='{domain_id}' "
+                    f"role='{role_name}' above threshold={threshold} "
+                    f"(clearance='{persona_clearance}'). "
                     f"This query may need human escalation."
                 )
             }
 
         top = results[0]
         return {
-            "found": True,
-            "expert_decision": top.get("expert_decision"),
+            "found":            True,
+            "expert_decision":  top.get("expert_decision"),
             "impact_archetype": top.get("impact_archetype"),
-            "similarity": round(top.get("similarity", 0), 4),
-            "reasoning": top.get("reasoning"),
-            "domain": top.get("industry"),
-            "message": "Expert logic retrieved from Logic Vault."
+            "similarity":       round(top.get("similarity", 0), 4),
+            "reasoning":        top.get("reasoning"),
+            "domain_id":        domain_id,
+            "role_name":        role_name,
+            "message":          "Expert logic retrieved from Logic Vault."
         }
 
     except Exception as e:
         return {
-            "found": False,
-            "expert_decision": None,
+            "found":            False,
+            "expert_decision":  None,
             "impact_archetype": None,
-            "similarity": 0.0,
-            "reasoning": None,
-            "domain": domain,
-            "message": f"Retrieval error: {str(e)}"
+            "similarity":       0.0,
+            "reasoning":        None,
+            "domain_id":        domain_id,
+            "role_name":        role_name,
+            "message":          f"Retrieval error: {str(e)}"
         }
+
 
 
 @tool

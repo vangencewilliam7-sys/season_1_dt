@@ -70,7 +70,8 @@ class LogicExtractor:
                 response_format={"type": "json_object"}
             )
             
-            data = json.loads(response.choices[0].message.content)
+            content = response.choices[0].message.content
+            data = json.loads(content if content else "{}")
             cases_data = data.get("cases", [])
             
             master_cases = []

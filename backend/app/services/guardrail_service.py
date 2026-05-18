@@ -42,7 +42,8 @@ class GuardrailService:
                 ],
                 temperature=0
             )
-            result = response.choices[0].message.content.strip().upper()
+            content = response.choices[0].message.content
+            result = (content if content else "").strip().upper()
             return "TRUE" in result
         except Exception as e:
             print(f"Guardrail Error: {e}")

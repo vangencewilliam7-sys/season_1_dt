@@ -7,10 +7,17 @@ from app.skills.middleware.validation import SKILL_REGISTRY
 def intent_detection_node(state: ChatState) -> ChatState:
     print(f"--- CHAT: Intent Detection Node ---")
     
-    # Emergency keywords fallback
-    emergency_keywords = ["bleeding", "emergency", "suicide", "hurt", "dying", "blood"]
-    if any(keyword in state.query.lower() for keyword in emergency_keywords):
-        state.intent_type = "knowledge"
+    # Red Zone Emergency escalation triaging layer (Acute symptoms only)
+    emergency_keywords = ["suicide", "overdose", "unconscious", "bleeding profusely", "severe chest pain", "active self-harm"]
+    query_lower = state.query.lower()
+    
+    has_emergency = any(keyword in query_lower for keyword in emergency_keywords)
+    has_critical_lab = ("k+" in query_lower or "potassium" in query_lower) and ("6." in query_lower or "7." in query_lower)
+    
+    if has_emergency or has_critical_lab:
+        print("--- RED ZONE ESCALATION DETECTED ---")
+        state.intent_type = "emergency_escalation"
+        state.triage_level = "RED_ZONE"
         return state
 
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
@@ -43,7 +50,11 @@ If the user wants to perform an action, you must:
    - Use a valid ISO-8601 datetime for missing dates, or parse the date given in the message (e.g. 2026-05-07T10:00:00Z).
    - Use valid Enum values like 'CONSULT' for reason_code if missing.
 
-If the user is just asking a question, set intent to 'knowledge'.
+If the user is asking for medical/clinical advice or general synthesis, set intent to 'knowledge'.
+Additionally, if intent is 'knowledge' and the user's query lacks concrete objective vitals (like formal blood pressure readings, fasting glucose numbers, or lab reports) OR if the user explicitly mentions they don't know their vitals/labs, you must:
+1. Set 'low_data_mode' to true.
+2. List the 'missing_metrics' (e.g., ["blood_pressure", "blood_glucose", "lipids", "visceral_fat"]).
+3. If the user provides proxy observations (e.g., feeling thirsty, frequent urination, dark velvety skin patches on the neck, or tight belts), extract them as key-value pairs into 'accumulated_evidence'.
 
 Return ONLY valid JSON.
 """
@@ -52,7 +63,7 @@ Return ONLY valid JSON.
         "type": "function",
         "function": {
             "name": "route_intent",
-            "description": "Route the user intent to either knowledge or action.",
+            "description": "Route the user intent to either knowledge or action, and extract proxy evidence if in low data state.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -67,6 +78,19 @@ Return ONLY valid JSON.
                     "params": {
                         "type": "object",
                         "description": "The extracted parameters for the skill."
+                    },
+                    "low_data_mode": {
+                        "type": "boolean",
+                        "description": "Set to true if the query asks for clinical diagnosis/advice but lacks objective vitals/lab reports."
+                    },
+                    "missing_metrics": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of missing metrics like 'blood_pressure', 'blood_glucose', 'lipids'."
+                    },
+                    "accumulated_evidence": {
+                        "type": "object",
+                        "description": "Extracted proxy answers provided by the user (e.g. thirst frequency, dark skin patches, tight belt)."
                     }
                 },
                 "required": ["intent"]
@@ -123,6 +147,25 @@ Return ONLY valid JSON.
                     params["required_documents"] = ["blood_test", "ecg"]
                     
             state.extracted_params = params
+        else:
+            # Populate low data proxy fields
+            state.low_data_mode = args.get("low_data_mode", False)
+            state.missing_metrics = args.get("missing_metrics") or []
+            state.accumulated_evidence = args.get("accumulated_evidence") or {}
+            
+            if state.low_data_mode:
+                state.triage_level = "YELLOW_ZONE"
+            
+            # If evidence was accumulated, compute likelihood score and route to main path
+            if state.accumulated_evidence:
+                state.low_data_mode = False  # Let definitive path execute
+                evidence_str = ", ".join([f"{k}: {v}" for k, v in state.accumulated_evidence.items()])
+                if "neck" in evidence_str.lower() or "acanthosis" in evidence_str.lower() or "thirst" in evidence_str.lower() or "patch" in evidence_str.lower():
+                    state.likelihood_score = "High probability of severe insulin resistance / prediabetes based on Acanthosis Nigricans and thirst proxies; recommend formal screening."
+                elif "headache" in evidence_str.lower() or "thumping" in evidence_str.lower() or "pressure" in evidence_str.lower():
+                    state.likelihood_score = "High probability of Stage 2 Hypertension based on symptomatic report; recommend formal screening."
+                else:
+                    state.likelihood_score = "Elevated metabolic risk identified from physical proxies; formal laboratory verification required."
             
     except Exception as e:
         print(f"Intent detection failed: {e}")

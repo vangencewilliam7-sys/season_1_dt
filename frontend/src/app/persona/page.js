@@ -1,5 +1,7 @@
 'use client'
 import Sidebar from '../../components/layout/Sidebar'
+import { DashboardService } from '../../lib/api/services/DashboardService'
+import { PersonaService } from '../../lib/api/services/PersonaService'
 import { useState, useEffect } from 'react'
 import { 
   BrainIcon, 
@@ -13,38 +15,42 @@ export default function PersonaDashboard() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   
-  // Behavioral sliders
-  const [safety, setSafety] = useState(85)
-  const [socratic, setSocratic] = useState(70)
-  const [empathy, setEmpathy] = useState(90)
-  const [protocol, setProtocol] = useState(95)
+  const [dynamicTraits, setDynamicTraits] = useState([])
+  const [linguisticDna, setLinguisticDna] = useState([])
+  const [manifestText, setManifestText] = useState("Loading manifest...")
+
+  const updateTrait = (id, newValue) => {
+    setDynamicTraits(prev => prev.map(t => t.id === id ? { ...t, value: newValue } : t))
+  }
   
   const [compiling, setCompiling] = useState(false)
   const [compileSuccess, setCompileSuccess] = useState(false)
 
   useEffect(() => {
-    fetch('/api/stats?expertId=demo')
-      .then(res => res.json())
+    // Fetch stats
+    DashboardService.getStats('demo')
+      .then(data => setStats(data))
+      .catch(err => console.error("Failed to fetch stats:", err))
+
+    // Fetch persona profile
+    PersonaService.getProfile()
       .then(data => {
-        setStats(data)
-        setLoading(false)
+        if (data) {
+          setDynamicTraits(data.traits || [])
+          setLinguisticDna(data.linguisticDna || [])
+          setManifestText(data.manifest || 'No manifest compiled.')
+        }
       })
-      .catch(err => {
-        console.error("Failed to fetch stats:", err)
-        setLoading(false)
-      })
+      .catch(err => console.error("Failed to fetch persona profile:", err))
+      .finally(() => setLoading(false))
   }, [])
 
   const handleCompile = () => {
     setCompiling(true)
     setCompileSuccess(false)
-    
-    // Simulate compilation delay
     setTimeout(() => {
       setCompiling(false)
       setCompileSuccess(true)
-      
-      // Reset success message after 5 seconds
       setTimeout(() => setCompileSuccess(false), 5000)
     }, 2500)
   }
@@ -53,49 +59,90 @@ export default function PersonaDashboard() {
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F4F7FB', fontFamily: 'var(--font-sans), Inter, system-ui, sans-serif' }}>
       <Sidebar active="/persona" />
 
-      <main style={{ flex: 1, padding: '40px', overflow: 'auto' }}>
-        <div className="fade-up" style={{ marginBottom: 40 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8, color: '#03045E' }}>Expert Persona Architecture</h1>
-          <p style={{ color: '#475569', fontSize: 15, maxWidth: '600px' }}>
-            Configure the cognitive traits and behavioral matrices of your Digital Twin. 
-            The Persona Engine fuses these traits with the Master Cases in your Logic Vault.
-          </p>
+      <main style={{ flex: 1, padding: '40px', overflowY: 'auto', minWidth: 0 }}>
+        <div className="fade-up" style={{ marginBottom: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div>
+            <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8, color: '#03045E' }}>Expert Persona Architecture</h1>
+            <p style={{ color: '#475569', fontSize: 15, maxWidth: '600px' }}>
+              Review the exact prompt instructions, cognitive traits, and linguistic DNA extracted from your interviews. 
+            </p>
+          </div>
+          <div style={{ background: '#E0E7FF', color: '#3730A3', padding: '8px 16px', borderRadius: '8px', fontSize: 13, fontWeight: 700, border: '1px solid #C7D2FE' }}>
+            ACTIVE PROFILE: DR. SARAH JENKINS (TWIN)
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: 32 }}>
+        {/* FULL WIDTH MASSIVE PROMPT TERMINAL */}
+        <div className="fade-up" style={{
+          background: '#020617', // Deeper black for a more premium server look
+          borderRadius: '12px',
+          padding: '0',
+          marginBottom: 32,
+          boxShadow: '0 24px 48px rgba(0,0,0,0.25)',
+          border: '1px solid #1E293B',
+          overflow: 'hidden'
+        }}>
+          {/* Terminal Header - Server Slate Style */}
+          <div style={{ background: '#0F172A', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1E293B' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 8, height: 8, background: '#38BDF8', boxShadow: '0 0 12px #38BDF8', animation: 'pulse 2s infinite' }} />
+              <div style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'monospace', letterSpacing: '2px', textTransform: 'uppercase' }}>
+                Manifest_ID: <span style={{ color: '#E2E8F0', fontWeight: 600 }}>#7A9F-2B</span>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <div style={{ fontSize: 12, color: '#64748B', fontFamily: 'monospace' }}>Type: XML</div>
+              <div style={{ fontSize: 11, color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '4px', border: '1px solid rgba(16,185,129,0.2)', fontFamily: 'monospace', letterSpacing: '1px' }}>
+                STATUS: ACTIVE
+              </div>
+            </div>
+          </div>
           
-          {/* LEFT COLUMN: IDENTITY & TUNING */}
+          {/* Terminal Body */}
+          <div style={{ padding: '32px', overflowX: 'auto' }}>
+            <pre style={{ margin: 0, color: '#E2E8F0', fontFamily: '"Fira Code", monospace', fontSize: 14, lineHeight: 1.8 }}>
+              {manifestText}
+            </pre>
+          </div>
+        </div>
+
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
+          gap: 32 
+        }}>
+          
+          {/* LEFT COLUMN: BEHAVIOR & LINGUISTICS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
             
-            {/* Identity Card */}
+            {/* Linguistic DNA Explained */}
             <div className="fade-up" style={{
-              background: 'linear-gradient(135deg, #03045E 0%, #0077B6 50%, #00B4D8 100%)',
+              background: '#FFFFFF',
+              border: '1px solid #E2E8F0',
               borderRadius: '20px',
               padding: '32px',
-              position: 'relative',
-              overflow: 'hidden',
-              boxShadow: '0 8px 32px rgba(3, 4, 94, 0.2)',
+              boxShadow: '0 4px 12px rgba(3, 4, 94, 0.03)',
             }}>
-              <div style={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, background: 'rgba(255,255,255,0.1)', filter: 'blur(60px)', borderRadius: '50%' }} />
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, position: 'relative', zIndex: 1 }}>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)', letterSpacing: 1.5, marginBottom: 8, textTransform: 'uppercase' }}>
-                    Active Persona Profile
-                  </div>
-                  <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4, color: '#FFFFFF' }}>Dr. Sarah Jenkins (Twin)</h2>
-                  <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>Senior Reproductive Endocrinologist</div>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', padding: '6px 14px', borderRadius: '8px', fontSize: 12, fontWeight: 600, border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(4px)' }}>
-                  SHADOW MODE ACTIVE
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: '#03045E' }}>Extracted Linguistic DNA</h2>
+                <div style={{ fontSize: 11, color: '#0077B6', background: '#CAF0F8', padding: '4px 10px', borderRadius: '99px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tacit Extraction</div>
               </div>
+              <p style={{ fontSize: 14, color: '#475569', marginBottom: 24, lineHeight: 1.6 }}>
+                These are the specific conversational habits and linguistic rules extracted from your interview answers. They ensure the AI speaks exactly like you do.
+              </p>
               
-              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '20px', border: '1px solid rgba(255,255,255,0.15)', position: 'relative', zIndex: 1, backdropFilter: 'blur(8px)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '1px' }}>CORE SYSTEM INSTRUCTION</div>
-                <p style={{ fontSize: 14, lineHeight: 1.7, color: '#FFFFFF', fontStyle: 'italic' }}>
-                  "You are an expert Reproductive Endocrinologist. You must apply strict clinical safety protocols while maintaining a deeply empathetic, patient-centric bedside manner. You will use Socratic questioning to uncover missing clinical history before jumping to diagnoses. Base all logic strictly on the embedded Master Cases in the Logic Vault."
-                </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                {linguisticDna.length > 0 ? linguisticDna.map((dna, idx) => (
+                  <div key={idx} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '16px', borderRadius: '12px' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#03045E', marginBottom: 6 }}>{dna.title}</div>
+                    <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.5 }}>{dna.desc}</div>
+                  </div>
+                )) : (
+                  <div style={{ padding: '20px', color: '#64748B', fontSize: 13, background: '#F8FAFC', borderRadius: '12px', border: '1px dashed #E2E8F0', gridColumn: 'span 2', textAlign: 'center' }}>
+                    No linguistic DNA profiles found.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -107,13 +154,27 @@ export default function PersonaDashboard() {
               padding: '32px',
               boxShadow: '0 4px 12px rgba(3, 4, 94, 0.03)',
             }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24, color: '#03045E' }}>Behavioral Tuning Matrix</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: '#03045E' }}>Dynamic Behavioral Matrix</h2>
+                <div style={{ fontSize: 11, color: '#0077B6', background: '#CAF0F8', padding: '4px 10px', borderRadius: '99px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Auto-extracted</div>
+              </div>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                <SliderControl label="Clinical Safety Strictness" value={safety} setValue={setSafety} color="#03045E" bg="#CAF0F8" desc="Threshold for escalating to emergency protocols" />
-                <SliderControl label="Socratic Questioning" value={socratic} setValue={setSocratic} color="#0077B6" bg="#CAF0F8" desc="Tendency to ask clarifying questions vs giving immediate answers" />
-                <SliderControl label="Empathy & Bedside Manner" value={empathy} setValue={setEmpathy} color="#00B4D8" bg="#CAF0F8" desc="Warmth, validation, and emotional support tone" />
-                <SliderControl label="Protocol Adherence" value={protocol} setValue={setProtocol} color="#F59E0B" bg="#FFFBEB" desc="Strictness in following embedded Master Cases exactly" />
+                {dynamicTraits.length > 0 ? dynamicTraits.map(trait => (
+                  <SliderControl 
+                    key={trait.id}
+                    label={trait.label} 
+                    value={trait.value} 
+                    setValue={(val) => updateTrait(trait.id, val)} 
+                    color={trait.color} 
+                    bg={trait.bg} 
+                    desc={trait.desc} 
+                  />
+                )) : (
+                  <div style={{ padding: '20px', color: '#64748B', fontSize: 13, background: '#F8FAFC', borderRadius: '12px', border: '1px dashed #E2E8F0', textAlign: 'center' }}>
+                    No dynamic behavioral traits configured.
+                  </div>
+                )}
               </div>
             </div>
             
@@ -127,12 +188,12 @@ export default function PersonaDashboard() {
               background: '#FFFFFF',
               border: '1px solid #E2E8F0',
               borderRadius: '20px',
-              padding: '24px',
+              padding: '32px',
               boxShadow: '0 4px 12px rgba(3, 4, 94, 0.03)',
             }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: '#03045E' }}>Knowledge DNA Integration</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24, color: '#03045E' }}>Knowledge DNA Integration</h2>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <StatRow icon={<BrainIcon />} label="Active Master Cases" value={loading ? "..." : (stats?.masterCases || 0)} />
                 <StatRow icon={<KnowledgeIcon />} label="Processed Document Chunks" value={loading ? "..." : (stats?.documentsIngested || 0)} />
                 <StatRow icon={<WarningIcon />} label="Pending Knowledge Gaps" value={loading ? "..." : (stats?.knowledgeGapsFlagged || 0)} alert={stats?.knowledgeGapsFlagged > 0} />
@@ -145,7 +206,7 @@ export default function PersonaDashboard() {
               background: '#FFFFFF',
               border: '1px solid #E2E8F0',
               borderRadius: '20px',
-              padding: '32px',
+              padding: '40px 32px',
               textAlign: 'center',
               display: 'flex',
               flexDirection: 'column',
@@ -153,17 +214,17 @@ export default function PersonaDashboard() {
               boxShadow: '0 4px 12px rgba(3, 4, 94, 0.03)',
             }}>
               <div style={{
-                width: 64, height: 64, borderRadius: '50%', 
+                width: 72, height: 72, borderRadius: '50%', 
                 background: compiling ? '#CAF0F8' : '#F8FAFC', 
                 border: `2px solid ${compiling ? '#0077B6' : '#E2E8F0'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24,
                 boxShadow: compiling ? '0 0 24px rgba(0,119,182,0.2)' : 'none',
                 transition: 'all 0.3s'
               }}>
-                {compiling ? <span style={{ animation: 'pulse 1s infinite ease-in-out', display: 'inline-block' }}>🔄</span> : <PersonaIcon size={28} />}
+                {compiling ? <span style={{ animation: 'pulse 1s infinite ease-in-out', display: 'inline-block', fontSize: 24 }}>🔄</span> : <PersonaIcon size={32} />}
               </div>
-              <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#03045E' }}>Manifest Compiler</h2>
-              <p style={{ color: '#475569', fontSize: 13, marginBottom: 24, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12, color: '#03045E' }}>Manifest Compiler</h2>
+              <p style={{ color: '#475569', fontSize: 14, marginBottom: 32, lineHeight: 1.6, maxWidth: 300 }}>
                 Fuses your Behavioral Matrix with the latest Logic Vault decisions to generate a new Persona Manifest.
               </p>
               
@@ -171,25 +232,25 @@ export default function PersonaDashboard() {
                 onClick={handleCompile}
                 disabled={compiling}
                 style={{
-                  width: '100%', padding: '14px',
+                  width: '100%', padding: '16px',
                   background: compiling ? '#94A3B8' : 'linear-gradient(135deg, #03045E, #0077B6)',
                   color: '#FFFFFF',
-                  border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: 14,
+                  border: 'none', borderRadius: '12px', fontWeight: 600, fontSize: 15,
                   cursor: compiling ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
                   position: 'relative', overflow: 'hidden',
-                  boxShadow: compiling ? 'none' : '0 4px 16px rgba(3, 4, 94, 0.2)',
+                  boxShadow: compiling ? 'none' : '0 8px 24px rgba(3, 4, 94, 0.25)',
                 }}
               >
                 {compiling ? 'Fusing DNA...' : 'Compile Persona Manifest'}
                 
                 {compiling && (
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, height: 3, background: '#00B4D8', width: '100%', animation: 'pulse 1s infinite ease-in-out' }}/>
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, height: 4, background: '#00B4D8', width: '100%', animation: 'pulse 1s infinite ease-in-out' }}/>
                 )}
               </button>
 
               {compileSuccess && (
-                <div className="fade-in" style={{ marginTop: 12, fontSize: 12, color: '#0077B6', fontWeight: 600 }}>
-                  ✓ Manifest compiled securely.
+                <div className="fade-in" style={{ marginTop: 16, fontSize: 13, color: '#0077B6', fontWeight: 600 }}>
+                  ✓ Manifest v1.0.5 compiled securely.
                 </div>
               )}
             </div>
@@ -258,17 +319,17 @@ function StatRow({ icon, label, value, alert }) {
   return (
     <div style={{ 
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
-      padding: '14px 16px', 
+      padding: '16px 20px', 
       background: alert ? '#FEF2F2' : '#F8FAFC', 
-      borderRadius: '8px', 
+      borderRadius: '12px', 
       border: alert ? '1px solid #FECACA' : '1px solid #E2E8F0',
       transition: 'all 0.15s',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>
-        <span style={{ fontSize: 14, fontWeight: 500, color: alert ? '#DC2626' : '#03045E' }}>{label}</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: alert ? '#DC2626' : '#03045E' }}>{label}</span>
       </div>
-      <span style={{ fontSize: 16, fontWeight: 700, color: '#03045E' }}>{value}</span>
+      <span style={{ fontSize: 18, fontWeight: 700, color: '#03045E' }}>{value}</span>
     </div>
   )
 }
