@@ -4,7 +4,7 @@ load_dotenv(override=True)  # Force .env priority over broken OS variables
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from .api import ingest, query, chat, stats, patients
+from .api import ingest, query, chat, stats, patients, documents
 import os
 from contextlib import asynccontextmanager
 import logging
@@ -59,6 +59,7 @@ app.include_router(query.router, prefix="/api", tags=["Query"])
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(stats.router, prefix="/api", tags=["Stats"])
 app.include_router(patients.router, prefix="/api/patients", tags=["Patients"])
+app.include_router(documents.router, prefix="/api", tags=["Documents"])
 
 # Skills Layer Routers (B&F Skills — Base + Functional)
 app.include_router(skills_router, prefix="/skills", tags=["Skills Execution"])

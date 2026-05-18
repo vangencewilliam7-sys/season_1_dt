@@ -144,3 +144,48 @@ class SupabaseService:
                 }).execute()
         except Exception as e:
             print(f"Error updating pipeline status: {e}")
+
+    # --- Storage / Bucket Methods ---
+
+    def upload_document(self, file_bytes: bytes, file_path: str, bucket_name: str = "knowledge-base-docs") -> dict:
+        """Uploads a file to a Supabase bucket."""
+        if not self.client: return {"error": "Supabase client not initialized"}
+        try:
+            # Try to get the file first to overwrite or just upload
+            response = self.client.storage.from_(bucket_name).upload(
+                file=file_bytes,
+                path=file_path,
+                file_options={"upsert": "true", "content-type": "application/octet-stream"}
+            )
+            return {"path": file_path, "response": response}
+        except Exception as e:
+            print(f"Error uploading document: {e}")
+            return {"error": str(e)}
+
+    def download_document(self, file_path: str, bucket_name: str = "knowledge-base-docs") -> bytes:
+        """Downloads a file from a Supabase bucket into memory."""
+        if not self.client: raise Exception("Supabase client not initialized")
+        try:
+            return self.client.storage.from_(bucket_name).download(file_path)
+        except Exception as e:
+            print(f"Error downloading document: {e}")
+            raise
+
+    def get_document_url(self, file_path: str, bucket_name: str = "knowledge-base-docs", expires_in: int = 3600) -> str:
+        """Generates a secure signed URL for temporary file access."""
+        if not self.client: return ""
+        try:
+            response = self.client.storage.from_(bucket_name).create_signed_url(file_path, expires_in)
+            return response.get("signedURL", "")
+        except Exception as e:
+            print(f"Error getting signed URL: {e}")
+            return ""
+
+    def list_documents(self, prefix: str = "", bucket_name: str = "knowledge-base-docs") -> list:
+        """Lists files in the bucket, optionally filtering by prefix."""
+        if not self.client: return []
+        try:
+            return self.client.storage.from_(bucket_name).list(path=prefix)
+        except Exception as e:
+            print(f"Error listing documents: {e}")
+            return []

@@ -10,9 +10,11 @@ import os
 def ingestion_node(state: GraphState) -> GraphState:
     print(f"--- INGESTION: Processing Document {state.document_id} ---")
 
-    # Use the file path passed from the ingest API via state — no hardcoded paths
-    if not state.source_path or not os.path.exists(state.source_path):
-        print(f"[ERROR] source_path missing or file not found: {state.source_path}")
+    import io
+
+    # Use the file path passed from the ingest API via state (this is now a Supabase Storage path)
+    if not state.source_path:
+        print(f"[ERROR] source_path missing in state.")
         return state
 
     parser = HierarchicalParser()
@@ -32,32 +34,45 @@ def ingestion_node(state: GraphState) -> GraphState:
 
     if existing_count > 0:
         print(f"[SKIP] {existing_count} chunks already exist for document {state.document_id}. Skipping re-ingestion.")
-        # Still parse locally to populate state.raw_chunks for downstream nodes
+        try:
+            file_bytes = db.download_document(file_path)
+        except Exception as e:
+            print(f"[ERROR] Failed to download {file_path} from Supabase: {e}")
+            return state
+
         if file_path.endswith('.docx'):
-            chunks = parser.parse_docx(file_path)
+            chunks = parser.parse_docx(io.BytesIO(file_bytes), file_name=os.path.basename(file_path))
         elif file_path.endswith('.pdf'):
-            chunks = parser.parse_pdf(file_path)
+            chunks = parser.parse_pdf(file_bytes, file_name=os.path.basename(file_path))
         else:
             return state
         for chunk in chunks:
             chunk["content"] = scrubber.scrub(chunk["content"])
             chunk["document_id"] = state.document_id
+            chunk["metadata"] = chunk.get("metadata", {})
+            chunk["metadata"]["category"] = state.category
         state.raw_chunks = [DocumentChunk(**c) for c in chunks]
         return state
 
-    all_chunks = []
+    try:
+        file_bytes = db.download_document(file_path)
+    except Exception as e:
+        print(f"[ERROR] Failed to download {file_path} from Supabase: {e}")
+        return state
 
-    # Parse the single uploaded file
+    # Parse the single uploaded file from memory
     if file_path.endswith('.docx'):
-        chunks = parser.parse_docx(file_path)
+        chunks = parser.parse_docx(io.BytesIO(file_bytes), file_name=os.path.basename(file_path))
     elif file_path.endswith('.pdf'):
-        chunks = parser.parse_pdf(file_path)
+        chunks = parser.parse_pdf(file_bytes, file_name=os.path.basename(file_path))
     else:
         print(f"[ERROR] Unsupported file type: {file_path}")
         return state
 
     for chunk in chunks:
         chunk["content"] = scrubber.scrub(chunk["content"])
+        chunk["metadata"] = chunk.get("metadata", {})
+        chunk["metadata"]["category"] = state.category
 
     # Filter out empty/whitespace-only chunks
     chunks = [c for c in chunks if c["content"].strip()]
@@ -71,6 +86,7 @@ def ingestion_node(state: GraphState) -> GraphState:
     embeddings = embedder.get_embeddings_batch(texts)
 
     db_chunks = []
+    all_chunks = []
     for i, chunk in enumerate(chunks):
         chunk["embedding"] = embeddings[i]
         chunk["document_id"] = state.document_id

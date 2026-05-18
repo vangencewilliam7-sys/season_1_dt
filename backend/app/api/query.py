@@ -88,7 +88,7 @@ async def query_twin(
                 return {
                     "status":     "autonomous",
                     "answer":     scrubber.restore(top_match["expert_decision"]),
-                    "reasoning":  scrubber.restore(top_match.get("reasoning", "Grounded in Expert DNA")),
+                    "reasoning":  scrubber.restore(top_match.get("reasoning", f"Grounded in Expert DNA (archetype: {top_match.get('impact_archetype', 'N/A')})")),
                     "confidence": confidence,
                     "domain":     adapter.get_domain_name(),
                     "role":       adapter.get_role_name(),

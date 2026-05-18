@@ -5,9 +5,9 @@ import { WordLogo, PdfLogo, LockIcon, UnlockIcon } from '../../components/ui/Doc
 import { KnowledgeHubService } from '../../lib/api/services/KnowledgeHubService'
 
 export default function KnowledgeHubPage() {
-  const [activeTab, setActiveTab] = useState('base')
   const [files, setFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [activeCategory, setActiveCategory] = useState('base_knowledge')
 
   // HITL Resolution State
   const [activeResolution, setActiveResolution] = useState(null)
@@ -122,7 +122,8 @@ export default function KnowledgeHubPage() {
         file,
         status: 'queued', // queued, uploading, done, archived, error
         message: '',
-        document_id: null
+        document_id: null,
+        category: activeCategory
       }))
       setFiles(prev => [...prev, ...newFiles])
     }
@@ -155,6 +156,7 @@ export default function KnowledgeHubPage() {
         }
 
         formData.append('file', files[i].file)
+        formData.append('category', files[i].category || 'base_knowledge')
 
         try {
           const data = await KnowledgeHubService.ingestDocument(formData);
@@ -242,44 +244,52 @@ export default function KnowledgeHubPage() {
           <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
             Manage and upload source documents and master case references for your Digital Twin.
           </p>
-
-          <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-            <button
-              onClick={() => setActiveTab('base')}
-              style={{
-                background: activeTab === 'base' ? '#F0F9FF' : 'transparent',
-                color: activeTab === 'base' ? '#0077B6' : 'var(--text-secondary)',
-                border: activeTab === 'base' ? '1px solid #90E0EF' : '1px solid transparent',
-                padding: '10px 20px', borderRadius: '99px', fontWeight: 600, fontSize: 14, cursor: 'pointer', transition: 'all 0.2s'
-              }}
-            >
-              📚 Base Knowledge
-            </button>
-            <button
-              onClick={() => setActiveTab('cases')}
-              style={{
-                background: activeTab === 'cases' ? '#FFFBEB' : 'transparent',
-                color: activeTab === 'cases' ? '#D97706' : 'var(--text-secondary)',
-                border: activeTab === 'cases' ? '1px solid #FDE68A' : '1px solid transparent',
-                padding: '10px 20px', borderRadius: '99px', fontWeight: 600, fontSize: 14, cursor: 'pointer', transition: 'all 0.2s'
-              }}
-            >
-              🧠 Master Cases
-            </button>
-          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+          {/* TAB NAVIGATION */}
+          <div className="fade-up" style={{
+            display: 'flex', gap: 16, background: '#FFFFFF', padding: '12px',
+            borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)'
+          }}>
+            <button
+              onClick={() => setActiveCategory('base_knowledge')}
+              style={{
+                flex: 1, padding: '16px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                transition: 'all 0.2s', fontWeight: 600, fontSize: 16,
+                background: activeCategory === 'base_knowledge' ? 'var(--accent-blue)10' : 'transparent',
+                color: activeCategory === 'base_knowledge' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                boxShadow: activeCategory === 'base_knowledge' ? 'inset 0 0 0 2px var(--accent-blue)' : 'inset 0 0 0 1px var(--border)'
+              }}
+            >
+              <span style={{ fontSize: 20 }}>📚</span> Base Knowledge
+            </button>
+            <button
+              onClick={() => setActiveCategory('master_cases')}
+              style={{
+                flex: 1, padding: '16px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                transition: 'all 0.2s', fontWeight: 600, fontSize: 16,
+                background: activeCategory === 'master_cases' ? 'var(--accent-orange)10' : 'transparent',
+                color: activeCategory === 'master_cases' ? 'var(--accent-orange)' : 'var(--text-secondary)',
+                boxShadow: activeCategory === 'master_cases' ? 'inset 0 0 0 2px var(--accent-orange)' : 'inset 0 0 0 1px var(--border)'
+              }}
+            >
+              <span style={{ fontSize: 20 }}>🧠</span> Master Cases
+            </button>
+          </div>
+
           {/* UPLOAD SECTION */}
           <div className="fade-up" style={{
             background: '#FFFFFF', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
             padding: '32px', width: '100%', boxShadow: 'var(--shadow-card)'
           }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
-              {activeTab === 'base' ? 'Upload Source Material' : 'Upload Master Cases'}
+              Upload {activeCategory === 'base_knowledge' ? 'Base Knowledge' : 'Master Cases'}
             </h2>
             <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24 }}>
-              {activeTab === 'base' 
+              {activeCategory === 'base_knowledge' 
                 ? 'Upload your core documentation (SOPs, guidelines, manuals) to build the base knowledge.'
                 : 'Upload curated case files that represent complex, real-world scenarios for the AI to study.'}
             </p>
@@ -354,7 +364,18 @@ export default function KnowledgeHubPage() {
                           {f.status === 'archived' ? '✅' : f.status === 'done' ? '⚠️' : f.status === 'error' ? '❌' : f.status === 'uploading' ? '⏳' : '📄'}
                         </span>
                         <div>
-                          <div style={{ fontSize: 14, fontWeight: 600 }}>{f.file?.name || 'Restored Document'}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600 }}>{f.file?.name || 'Restored Document'}</div>
+                            {f.category && (
+                              <span style={{ 
+                                fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+                                background: f.category === 'base_knowledge' ? 'var(--accent-blue)20' : 'var(--accent-orange)20',
+                                color: f.category === 'base_knowledge' ? 'var(--accent-blue)' : 'var(--accent-orange)'
+                              }}>
+                                {f.category === 'base_knowledge' ? '📚 Base Knowledge' : '🧠 Master Case'}
+                              </span>
+                            )}
+                          </div>
                           <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{f.file?.size ? (f.file.size / 1024 / 1024).toFixed(2) + ' MB' : 'Size Unknown'}</div>
                         </div>
                       </div>

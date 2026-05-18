@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query
 import os
 import shutil
 import uuid
@@ -10,44 +10,43 @@ from ..adapters import get_adapter, VALID_DOMAINS, VALID_ROLES
 
 router = APIRouter()
 
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+from ..services.supabase_client import SupabaseService
 
 # In-memory registry of file hashes to detect duplicates across server restarts
 # Maps file_hash -> {"document_id": ..., "filename": ...}
 _upload_hash_registry: dict[str, dict] = {}
 
-def _compute_file_hash(file_path: str) -> str:
+def _compute_file_hash(file_bytes: bytes) -> str:
     """Compute SHA-256 hash of a file's contents."""
     sha256 = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            sha256.update(chunk)
+    sha256.update(file_bytes)
     return sha256.hexdigest()
 
-def _rebuild_hash_registry(upload_dir: str):
-    """Scan existing uploads to rebuild the hash registry on startup."""
+def _rebuild_hash_registry():
+    """Scan existing uploads in Supabase to rebuild the hash registry on startup."""
+    global _upload_hash_registry
     if _upload_hash_registry:
         return  # Already built
-    if not os.path.exists(upload_dir):
-        return
-    for fname in os.listdir(upload_dir):
-        fpath = os.path.join(upload_dir, fname)
-        if os.path.isfile(fpath):
-            try:
-                file_hash = _compute_file_hash(fpath)
-                # Extract document_id from filename format: {uuid}_{original_name}
-                doc_id = fname.split("_", 1)[0]
-                _upload_hash_registry[file_hash] = {
-                    "document_id": doc_id,
-                    "filename": fname.split("_", 1)[1] if "_" in fname else fname,
-                }
-            except Exception:
-                pass
+    
+    db = SupabaseService()
+    files = db.list_documents()
+    for f in files:
+        fname = f.get("name")
+        if not fname or fname == ".emptyFolderPlaceholder":
+            continue
+        try:
+            # We can't efficiently hash remote files on startup without downloading them all.
+            # For now, we will rely on Supabase to not overwrite or we can just populate document_id.
+            # To properly do duplicate detection cloud-natively, we should store hashes in a DB table.
+            # Since this is an MVP, we'll skip pre-calculating hashes of old files.
+            pass
+        except Exception:
+            pass
 
 @router.post("/ingest")
 async def ingest_file(
     file: UploadFile = File(...),
+    category: str = Form("base_knowledge"),
     domain: str = Query(..., enum=VALID_DOMAINS, description="Domain for this twin: healthcare | it | education"),
     role:   str = Query(..., enum=VALID_ROLES,   description="Role for this twin: doctor | project_manager | tutor"),
 ):
@@ -55,26 +54,16 @@ async def ingest_file(
         raise HTTPException(status_code=400, detail="Only .docx and .pdf files are supported.")
     
     file_id = str(uuid.uuid4())
-    # Use absolute path derived from __file__ — never hardcode a drive letter
-    upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "uploads")
-    upload_dir = os.path.normpath(upload_dir)
-    os.makedirs(upload_dir, exist_ok=True)
-
-    # Rebuild hash registry from existing files (runs once)
-    _rebuild_hash_registry(upload_dir)
-
-    file_path = os.path.join(upload_dir, f"{file_id}_{file.filename}")
+    db = SupabaseService()
     
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    file_bytes = await file.read()
 
-    # Duplicate detection: hash the uploaded file and check if it already exists
-    file_hash = _compute_file_hash(file_path)
+    # Duplicate detection: hash the uploaded file bytes
+    file_hash = _compute_file_hash(file_bytes)
     if file_hash in _upload_hash_registry:
         existing = _upload_hash_registry[file_hash]
-        # Remove the duplicate file we just saved — use the original one
-        os.remove(file_path)
         existing_doc_id = existing["document_id"]
+        original_path = f"{existing_doc_id}_{existing['filename']}"
         
         # Resolve adapter so we can inject domain context even when restoring state
         try:
@@ -82,42 +71,39 @@ async def ingest_file(
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
-        # Find the original file on disk to re-run the pipeline (state is in-memory and may be lost on restart)
-        original_path = None
-        for fname in os.listdir(upload_dir):
-            if fname.startswith(existing_doc_id):
-                original_path = os.path.join(upload_dir, fname)
-                break
-        
-        if original_path and os.path.exists(original_path):
-            # Re-run the pipeline to restore in-memory state (no new chunks created — chunks already exist in Supabase)
-            import asyncio
-            pipeline = create_pipeline()
-            initial_state = GraphState(
-                document_id=existing_doc_id, 
-                source_path=original_path,
-                domain_id=adapter.get_domain_id(),
-                role_id=adapter.get_role_id(),
-                adapter_context=adapter.to_context_dict(),
+        # Re-run the pipeline to restore in-memory state
+        import asyncio
+        pipeline = create_pipeline()
+        initial_state = GraphState(
+            document_id=existing_doc_id,
+            category=category,
+            source_path=original_path,
+            domain_id=adapter.get_domain_id(),
+            role_id=adapter.get_role_id(),
+            adapter_context=adapter.to_context_dict(),
+        )
+        try:
+            await asyncio.wait_for(
+                asyncio.to_thread(pipeline.invoke, initial_state, {"configurable": {"thread_id": existing_doc_id}}),
+                timeout=300.0
             )
-            try:
-                await asyncio.wait_for(
-                    asyncio.to_thread(pipeline.invoke, initial_state, {"configurable": {"thread_id": existing_doc_id}}),
-                    timeout=300.0
-                )
-            except Exception:
-                pass
-            return {
-                "message": "Document already exists. Pipeline state restored.",
-                "document_id": existing_doc_id,
-                "file_path": original_path,
-                "pipeline_status": "restored_from_duplicate",
-                "is_duplicate": True,
-                "domain": adapter.get_domain_name(),
-                "role": adapter.get_role_name(),
-            }
-        else:
-            raise HTTPException(status_code=409, detail="Document was previously uploaded but the file is missing on disk. Please contact support.")
+        except Exception:
+            pass
+        return {
+            "message": "Document already exists. Pipeline state restored.",
+            "document_id": existing_doc_id,
+            "file_path": original_path,
+            "pipeline_status": "restored_from_duplicate",
+            "is_duplicate": True,
+            "domain": adapter.get_domain_name(),
+            "role": adapter.get_role_name(),
+        }
+    
+    # Upload to Supabase Storage in category folder
+    file_path = f"{category}/{file_id}_{file.filename}"
+    upload_res = db.upload_document(file_bytes, file_path)
+    if "error" in upload_res:
+        raise HTTPException(status_code=500, detail=f"Failed to upload to Supabase: {upload_res['error']}")
     
     # Register this file hash
     _upload_hash_registry[file_hash] = {"document_id": file_id, "filename": file.filename}
@@ -132,12 +118,13 @@ async def ingest_file(
     pipeline = create_pipeline()
     initial_state = GraphState(
         document_id=file_id,
+        category=category,
         source_path=file_path,
         domain_id=adapter.get_domain_id(),
         role_id=adapter.get_role_id(),
         adapter_context=adapter.to_context_dict(),
     )
-
+    
     try:
         # Run synchronous pipeline.invoke in a threadpool so it doesn't block FastAPI
         # Increased timeout to 5 minutes (300 seconds) because heavy OpenAI processing takes time
@@ -206,6 +193,7 @@ async def resolve_scenario(document_id: str, scenario_id: str, audio: UploadFile
         "scenario_id": scenario_id,
         "transcript": transcript
     }
+
 @router.post("/commit")
 async def commit_to_vault(
     scenario_id:     str,
@@ -214,7 +202,7 @@ async def commit_to_vault(
     domain:          str = Query(..., enum=VALID_DOMAINS, description="Domain this decision belongs to"),
     role:            str = Query(..., enum=VALID_ROLES,   description="Role this decision belongs to"),
     reasoning:       str = "",
-):
+    ):
     """
     Commits a human-verified expert decision into the production Logic Vault (expert_dna).
     Uses domain_id + role_id FKs instead of the legacy plain-text 'industry' field.
@@ -258,21 +246,30 @@ async def commit_to_vault(
 @router.get("/file-info/{document_id}")
 async def get_file_info(document_id: str):
     """Returns the filename and URL for an uploaded document so the frontend can embed a viewer."""
-    upload_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "uploads"))
+    db = SupabaseService()
+    files = db.list_documents()
     
-    if not os.path.exists(upload_dir):
-        raise HTTPException(status_code=404, detail="Uploads directory not found.")
-    
-    # Files are stored as {document_id}_{original_filename}
-    for fname in os.listdir(upload_dir):
-        if fname.startswith(document_id):
-            original_name = fname[len(document_id) + 1:]  # strip uuid_ prefix
+    for f in files:
+        fname = f.get("name", "")
+        if fname.startswith(document_id) or (f.get("metadata", {}).get("document_id") == document_id) or (document_id in fname):
+            # Try to strip uuid prefix or category folder prefix if present
+            # fname could be "base_knowledge/uuid_filename" or "uuid_filename"
+            base_fname = os.path.basename(fname)
+            if "_" in base_fname:
+                original_name = base_fname.split("_", 1)[1]
+            else:
+                original_name = base_fname
+                
             file_ext = os.path.splitext(fname)[1].lower()
+            
+            # Generate a secure signed URL that expires in 1 hour
+            signed_url = db.get_document_url(fname)
+            
             return {
                 "filename": original_name,
                 "stored_name": fname,
-                "file_url": f"http://localhost:8000/uploads/{fname}",
+                "file_url": signed_url,
                 "file_type": "docx" if file_ext == ".docx" else "pdf" if file_ext == ".pdf" else "unknown"
             }
     
-    raise HTTPException(status_code=404, detail="File not found for this document ID.")
+    raise HTTPException(status_code=404, detail="File not found in Supabase Storage.")

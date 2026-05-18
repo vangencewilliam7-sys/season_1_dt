@@ -5,6 +5,7 @@ class ChatState(BaseModel):
     expert_id:  str
     session_id: str
     query:      str
+    attached_content: Optional[str] = None
 
     # ── Domain Identity (injected at chat API boundary) ───────────────────────
     domain_id:       Optional[str]            = None

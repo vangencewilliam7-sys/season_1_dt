@@ -13,6 +13,7 @@ from .enums import ImpactArchetype
 
 class GraphState(BaseModel):
     document_id: str
+    category: str = "base_knowledge"
     source_path: Optional[str] = None   # Absolute path to the uploaded file — set by ingest API
 
     # ── Domain Identity (injected at API boundary via DomainAdapter) ──────────

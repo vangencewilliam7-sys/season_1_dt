@@ -111,7 +111,7 @@ create or replace function match_chunks(
     match_count     int
 )
 returns table (
-    id          uuid,
+    id          text,
     content     text,
     source_path text,
     metadata    jsonb,
@@ -138,19 +138,17 @@ $$;
 --            app/tools.py → retrieve_expert_knowledge()
 -- ─────────────────────────────────────────────────────────────────────────────
 create or replace function match_expert_dna(
-    query_embedding vector(1536),
-    match_threshold float,
-    match_count     int,
-    p_domain_id     uuid default null,
-    p_workflow_id   uuid default null
+    query_embedding  vector(1536),
+    match_threshold  float,
+    match_count      int,
+    p_domain_id      uuid default null,
+    p_workflow_id    uuid default null
 )
 returns table (
     id               uuid,
     scenario_id      text,
     expert_decision  text,
     impact_archetype text,
-    industry         text,
-    reasoning        text,
     similarity       float
 )
 language sql stable as $$
@@ -159,8 +157,6 @@ language sql stable as $$
         scenario_id,
         expert_decision,
         impact_archetype,
-        industry,
-        reasoning,
         1 - (embedding <=> query_embedding) as similarity
     from expert_dna
     where 1 - (embedding <=> query_embedding) > match_threshold

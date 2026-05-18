@@ -19,6 +19,7 @@ class ChatRequest(BaseModel):
     session_id: str
     domain:     str  # e.g. "healthcare"
     role:       str  # e.g. "doctor"
+    attached_content: Optional[str] = None
 
 class OverrideRequest(BaseModel):
     session_id: str
@@ -105,10 +106,17 @@ async def chat_message(req: ChatRequest):
         }
 
     pipeline = create_chat_pipeline()
+    
+    # Prepend attached content to query if it exists
+    full_query = req.message
+    if req.attached_content:
+        full_query = f"[ATTACHED DOCUMENT CONTEXT]:\n{req.attached_content}\n\n[USER QUERY]:\n{req.message}"
+
     initial_state = ChatState(
         expert_id=req.expert_id,
         session_id=req.session_id,
-        query=scrubbed_msg,
+        query=scrubber.scrub(full_query),
+        attached_content=req.attached_content,
         domain_id=adapter.get_domain_id(),
         role_id=adapter.get_role_id(),
         adapter_context={

@@ -17,13 +17,40 @@ export default function ChatPage() {
   const [sessionId, setSessionId] = useState('demo-session')
   const [domain, setDomain] = useState('education')
   const [role, setRole] = useState('tutor')
+  const [attachment, setAttachment] = useState(null) // { filename, content }
   const bottomRef = useRef(null)
   const fileInputRef = useRef(null)
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0]
-    if (file) {
-      setInput(prev => prev + (prev ? ' ' : '') + `[Document Attached: ${file.name}]`)
+    if (!file) return
+
+    setLoading(true)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const res = await fetch(`${API}/api/documents/upload`, {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.detail || 'Upload failed')
+      }
+      
+      const data = await res.json()
+      setAttachment({
+        filename: data.filename,
+        content: data.extracted_text
+      })
+    } catch (err) {
+      console.error(err)
+      alert(`Failed to extract text: ${err.message}`)
+    } finally {
+      setLoading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -142,8 +169,10 @@ export default function ChatPage() {
           message: currentInput, 
           session_id: sessionId, 
           domain: domain, 
-          role: role 
+          role: role,
+          attached_content: attachment?.content || null
         });
+        setAttachment(null);
 
         // Log trace to localStorage for the Glass Box page
         if (data.rationale) {
@@ -394,6 +423,30 @@ export default function ChatPage() {
           <div style={{ padding: '8px 28px', background: '#F0FDFA', borderTop: '1px solid #99F6E4', fontSize: '12px', color: '#0F766E', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div className="spinner" style={{ width: '12px', height: '12px', borderTopColor: '#0F766E' }}></div>
             Twin is actively listening and extracting logic from your manual intervention...
+          </div>
+        )}
+        {/* Attachment Pill */}
+        {attachment && (
+          <div style={{ 
+            padding: '8px 28px', 
+            background: '#F0FDFA', 
+            borderTop: '1px solid #99F6E4',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#0D9488' }}>📎 Attached: {attachment.filename}</span>
+            <button 
+              onClick={() => setAttachment(null)}
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                color: '#99F6E4', 
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 700
+              }}
+            >✕</button>
           </div>
         )}
         <div style={{

@@ -1,13 +1,14 @@
 import os
 from docx import Document
 import fitz # PyMuPDF
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 import uuid
+import io
 
 class HierarchicalParser:
     @staticmethod
-    def parse_docx(file_path: str) -> List[Dict[str, Any]]:
-        doc = Document(file_path)
+    def parse_docx(file_source: Union[str, io.BytesIO], file_name: str = "document.docx") -> List[Dict[str, Any]]:
+        doc = Document(file_source)
         chunks = []
         current_hierarchy = {1: None, 2: None, 3: None}
         
@@ -43,14 +44,17 @@ class HierarchicalParser:
                 "content": para.text,
                 "parent_id": parent_id,
                 "level": level,
-                "source_path": file_path,
+                "source_path": file_name if isinstance(file_source, io.BytesIO) else file_source,
                 "metadata": {"style": style}
             })
         return chunks
 
     @staticmethod
-    def parse_pdf(file_path: str) -> List[Dict[str, Any]]:
-        doc = fitz.open(file_path)
+    def parse_pdf(file_source: Union[str, bytes], file_name: str = "document.pdf") -> List[Dict[str, Any]]:
+        if isinstance(file_source, bytes):
+            doc = fitz.open(stream=file_source, filetype="pdf")
+        else:
+            doc = fitz.open(file_source)
         chunks = []
         # Basic implementation: treat each page or large block as a chunk
         # Advanced would detect font sizes for hierarchy
@@ -63,7 +67,7 @@ class HierarchicalParser:
                 "content": text,
                 "parent_id": None, # Simple flat parsing for PDF MVP
                 "level": 0,
-                "source_path": file_path,
+                "source_path": file_name if isinstance(file_source, bytes) else file_source,
                 "metadata": {"page": page_num + 1}
             })
         return chunks
