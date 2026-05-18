@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { DEMO_TRANSCRIPT, DEMO_LOGIC_VAULT, DEMO_STATS, DEMO_PATIENT } from '../../../lib/demo/demo_seed'
 
@@ -104,8 +104,28 @@ function LogicVaultDrawer({ caseId, onClose }) {
 export default function DemoAuditPage() {
   const router = useRouter()
   const [activeDrawer, setActiveDrawer] = useState(null)
+  const [messages, setMessages] = useState(DEMO_TRANSCRIPT)
 
-  const formatTime = (iso) => new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const localHistory = localStorage.getItem('demo_chat_history')
+      if (localHistory) {
+        try {
+          setMessages(JSON.parse(localHistory))
+        } catch (e) {
+          console.error("Failed to parse local history", e)
+        }
+      }
+    }
+  }, [])
+
+  const formatTime = (iso) => {
+    try {
+      return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    } catch {
+      return '12:00:00'
+    }
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
@@ -191,11 +211,11 @@ export default function DemoAuditPage() {
         <main style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>
           <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A', marginBottom: '4px' }}>Consultation Transcript</h1>
           <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '28px' }}>
-            {DEMO_STATS.session_date} · {DEMO_STATS.session_duration_min} minute session · {DEMO_TRANSCRIPT.length} messages
+            {DEMO_STATS.session_date} · {DEMO_STATS.session_duration_min} minute session · {messages.length} messages
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '720px' }}>
-            {DEMO_TRANSCRIPT.map((msg) => {
+            {messages.map((msg) => {
               const isUser = msg.role === 'user'
               const isExpert = msg.sender === 'human_expert'
               return (

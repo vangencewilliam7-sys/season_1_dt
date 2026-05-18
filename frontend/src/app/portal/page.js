@@ -14,6 +14,7 @@ export default function ClientPortal() {
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
   const [demoStep, setDemoStep] = useState(0)
+  const expectedResponseText = DEMO_TRANSCRIPT[demoStep * 2]?.content || ""
 
   useEffect(() => {
     let dom = 'healthcare'
@@ -21,55 +22,64 @@ export default function ClientPortal() {
       const params = new URLSearchParams(window.location.search)
       dom = params.get('domain') || 'healthcare'
       setDomain(dom)
+      
+      // Clear demo chat history on first load so it starts fresh!
+      localStorage.removeItem('demo_chat_history')
     }
 
-    // Hardcode the welcome message for the demo video
-    setMessages([
-      {
-        role: 'assistant',
-        content: dom === 'healthcare'
-          ? "Hello! I am your AI Health Twin. I've initialized your patient profile and am ready to support your clinical triage screening. How are you feeling today?"
-          : "Hello! I am your AI assistant. I'm here to help you manage your tasks and answer your questions.",
-        sender: 'twin'
-      }
-    ])
+    // Initialize with empty messages for the demo video
+    setMessages([])
   }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  async function sendMessage() {
-    if (!input.trim() || loading) return
-    const currentInput = input
-    setInput('')
+  async function sendMessage(overrideText) {
+    const currentInput = typeof overrideText === 'string' ? overrideText : input
+    if (!currentInput.trim() || loading) return
+    
+    // Clear input field if it was a manual send
+    if (typeof overrideText !== 'string') {
+      setInput('')
+    }
     setLoading(true)
 
     // Add the user's typed message to the UI
-    setMessages(prev => [...prev, {
-      role: 'user',
-      content: currentInput,
-      sender: 'patient'
-    }])
+    let updatedMsgs = []
+    setMessages(prev => {
+      updatedMsgs = [...prev, {
+        role: 'user',
+        content: currentInput,
+        sender: 'patient',
+        created_at: new Date().toISOString()
+      }]
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('demo_chat_history', JSON.stringify(updatedMsgs))
+      }
+      return updatedMsgs
+    })
 
-    // Fake the AI thinking delay for the video
+    // 3 seconds latency with typing animation for the Twin
     setTimeout(() => {
       const twinIndex = demoStep * 2 + 1; // 1, 3, 5, 7
       
       if (DEMO_TRANSCRIPT[twinIndex]) {
-        setMessages(prev => [...prev, DEMO_TRANSCRIPT[twinIndex]])
-      }
-
-      // If we just sent message 7, trigger the expert override (message 8) 2 seconds later!
-      if (twinIndex === 7) {
-        setTimeout(() => {
-          setMessages(prev => [...prev, DEMO_TRANSCRIPT[8]])
-        }, 2000)
+        setMessages(prev => {
+          const finalMsgs = [...prev, {
+            ...DEMO_TRANSCRIPT[twinIndex],
+            created_at: new Date().toISOString()
+          }]
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('demo_chat_history', JSON.stringify(finalMsgs))
+          }
+          return finalMsgs
+        })
       }
 
       setDemoStep(prev => prev + 1)
       setLoading(false)
-    }, 1500)
+    }, 3000)
   }
 
   return (
@@ -236,6 +246,133 @@ export default function ClientPortal() {
           )}
           <div ref={bottomRef} />
         </div>
+
+        {/* Suggested Response Pills */}
+        {expectedResponseText && (
+          <div style={{
+            padding: '12px 32px',
+            background: '#FFFFFF',
+            borderTop: '1px solid #E2E8F0',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '10px',
+            alignItems: 'center'
+          }}>
+            <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>Suggested Replies:</span>
+            {demoStep === 0 && (
+              <>
+                <button
+                  onClick={() => setInput("Hi doctor, I have been feeling extremely tired lately and no matter how much water I drink, I am always thirsty.")}
+                  disabled={loading}
+                  style={{
+                    padding: '6px 14px', background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '20px',
+                    fontSize: '13px', color: '#334155', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+                >
+                  🔋 Tired & always thirsty symptoms
+                </button>
+                <button
+                  onClick={() => setInput("Hi doctor, I would like to do a quick metabolic assessment.")}
+                  disabled={loading}
+                  style={{
+                    padding: '6px 14px', background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '20px',
+                    fontSize: '13px', color: '#334155', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+                >
+                  📋 General screening inquiry
+                </button>
+              </>
+            )}
+            {demoStep === 1 && (
+              <>
+                <button
+                  onClick={() => setInput("Yes, I actually had to loosen my belt by two notches over the last few months, even though the scale hasn't changed much.")}
+                  disabled={loading}
+                  style={{
+                    padding: '6px 14px', background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '20px',
+                    fontSize: '13px', color: '#334155', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+                >
+                  👖 Loosened belt by 2 notches
+                </button>
+                <button
+                  onClick={() => setInput("No weight changes or belt adjustments, but my joints ache frequently.")}
+                  disabled={loading}
+                  style={{
+                    padding: '6px 14px', background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '20px',
+                    fontSize: '13px', color: '#334155', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+                >
+                  📏 Alternative symptom feedback
+                </button>
+              </>
+            )}
+            {demoStep === 2 && (
+              <>
+                <button
+                  onClick={() => setInput("I don't really have time to go to a clinic right now. Can you just tell me what diet to follow or what medicine to take to fix this?")}
+                  disabled={loading}
+                  style={{
+                    padding: '6px 14px', background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '20px',
+                    fontSize: '13px', color: '#334155', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+                >
+                  🍎 Just recommend a diet online
+                </button>
+                <button
+                  onClick={() => setInput("Alright, I understand. Can you guide me on booking an in-person consultation?")}
+                  disabled={loading}
+                  style={{
+                    padding: '6px 14px', background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '20px',
+                    fontSize: '13px', color: '#334155', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+                >
+                  🗓️ How do I schedule a visit?
+                </button>
+              </>
+            )}
+            {demoStep === 3 && (
+              <>
+                <button
+                  onClick={() => setInput("Are you sure it's that serious? I just thought I was working too hard.")}
+                  disabled={loading}
+                  style={{
+                    padding: '6px 14px', background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '20px',
+                    fontSize: '13px', color: '#334155', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+                >
+                  ❓ Is central obesity really that serious?
+                </button>
+                <button
+                  onClick={() => setInput("I'll think about scheduling and let you know.")}
+                  disabled={loading}
+                  style={{
+                    padding: '6px 14px', background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: '20px',
+                    fontSize: '13px', color: '#334155', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = '#E2E8F0'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+                >
+                  ⏳ I will think it over
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Input area */}
         <div style={{ padding: '24px 32px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0' }}>

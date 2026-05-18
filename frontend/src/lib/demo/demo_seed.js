@@ -77,17 +77,6 @@ export const DEMO_TRANSCRIPT = [
     source_case_id: 'CASE_HC_001',
     created_at: '2026-05-18T09:15:28Z',
   },
-  {
-    id: 'msg_009',
-    role: 'assistant',
-    content: 'I want to step in here and agree completely with the Digital Twin. The symptoms you are describing need clinical attention. I am opening up a priority slot for you tomorrow morning at 9 AM so we can run these labs. Please book it. — Dr. Venkatesh',
-    sender: 'human_expert',
-    confidence: 1.0,
-    rationale: 'Direct Expert Override — Dr. Venkatesh intervening to secure the appointment after observing patient hesitation in the transcript.',
-    source_case_id: null,
-    is_expert_override: true,
-    created_at: '2026-05-18T09:16:02Z',
-  },
 ];
 
 export const DEMO_LOGIC_VAULT = {

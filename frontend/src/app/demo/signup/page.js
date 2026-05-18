@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation'
 export default function DemoSignupPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  
+
   const [formData, setFormData] = useState({
-    fullName: 'Dr. Rajesh Venkatesh',
-    email: 'dr.venkatesh@apollo-hospitals.in',
-    hospital: 'Apollo Hospitals',
+    fullName: 'Dr. Harini',
+    email: 'drHarini@gamil.com',
+    hospital: 'HHospitals',
     password: 'password123'
   })
 
@@ -20,7 +20,7 @@ export default function DemoSignupPage() {
   const handleSignup = (e) => {
     e.preventDefault()
     setLoading(true)
-    
+
     // Mock network delay for demo effect
     setTimeout(() => {
       setLoading(false)
@@ -40,7 +40,7 @@ export default function DemoSignupPage() {
       padding: '40px 24px',
       fontFamily: 'Inter, system-ui, sans-serif',
     }}>
-      
+
       {/* Brand Header */}
       <div style={{ textAlign: 'center', marginBottom: '40px' }}>
         <div style={{
@@ -76,7 +76,7 @@ export default function DemoSignupPage() {
         backdropFilter: 'blur(12px)',
       }}>
         <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
+
           <div>
             <label htmlFor="fullName" style={{ display: 'block', color: '#94A3B8', fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
               Full Name
@@ -180,11 +180,11 @@ export default function DemoSignupPage() {
             {loading ? 'Creating Account...' : 'Register for Demo Access →'}
           </button>
         </form>
-        
+
         <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '13px', color: '#64748B' }}>
           Already have an account?{' '}
-          <span 
-            onClick={() => router.push('/demo/signin')} 
+          <span
+            onClick={() => router.push('/demo/signin')}
             style={{ color: '#60A5FA', cursor: 'pointer', fontWeight: 600 }}
           >
             Sign in
