@@ -19,6 +19,11 @@ export default function ChatPage() {
   const [role, setRole] = useState('tutor')
   const bottomRef = useRef(null)
   const fileInputRef = useRef(null)
+  const loadingRef = useRef(false)
+
+  useEffect(() => {
+    loadingRef.current = loading
+  }, [loading])
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0]
@@ -89,9 +94,11 @@ export default function ChatPage() {
     initialFetch()
 
     const interval = setInterval(async () => {
+      if (loadingRef.current) return; // Skip polling updates while active message is generating
       try {
         const data = await ChatService.getHistory(sId)
         if (data && data.messages && data.messages.length > 0) {
+          if (loadingRef.current) return; // Double check in case state changed during fetch
           setMessages(data.messages)
         }
         if (data && data.status) {
@@ -124,6 +131,9 @@ export default function ChatPage() {
     const currentInput = input
     setInput('')
     setLoading(true)
+
+    // Optimistic update: show user message immediately in the UI
+    setMessages(prev => [...prev, { role: 'user', content: currentInput }])
 
     try {
       if (isOverride) {
