@@ -247,29 +247,35 @@ async def commit_to_vault(
 async def get_file_info(document_id: str):
     """Returns the filename and URL for an uploaded document so the frontend can embed a viewer."""
     db = SupabaseService()
-    files = db.list_documents()
     
-    for f in files:
-        fname = f.get("name", "")
-        if fname.startswith(document_id) or (f.get("metadata", {}).get("document_id") == document_id) or (document_id in fname):
-            # Try to strip uuid prefix or category folder prefix if present
-            # fname could be "base_knowledge/uuid_filename" or "uuid_filename"
-            base_fname = os.path.basename(fname)
-            if "_" in base_fname:
-                original_name = base_fname.split("_", 1)[1]
-            else:
-                original_name = base_fname
+    # Search root and category-specific subfolders in Supabase storage
+    folders = ["base_knowledge", "master_cases", ""]
+    
+    for folder in folders:
+        files = db.list_documents(prefix=folder)
+        for f in files:
+            fname = f.get("name", "")
+            stored_name = f"{folder}/{fname}" if folder else fname
+            
+            if fname.startswith(document_id) or (f.get("metadata", {}).get("document_id") == document_id) or (document_id in fname):
+                # Try to strip uuid prefix or category folder prefix if present
+                # fname could be "base_knowledge/uuid_filename" or "uuid_filename"
+                base_fname = os.path.basename(fname)
+                if "_" in base_fname:
+                    original_name = base_fname.split("_", 1)[1]
+                else:
+                    original_name = base_fname
+                    
+                file_ext = os.path.splitext(fname)[1].lower()
                 
-            file_ext = os.path.splitext(fname)[1].lower()
-            
-            # Generate a secure signed URL that expires in 1 hour
-            signed_url = db.get_document_url(fname)
-            
-            return {
-                "filename": original_name,
-                "stored_name": fname,
-                "file_url": signed_url,
-                "file_type": "docx" if file_ext == ".docx" else "pdf" if file_ext == ".pdf" else "unknown"
-            }
+                # Generate a secure signed URL that expires in 1 hour
+                signed_url = db.get_document_url(stored_name)
+                
+                return {
+                    "filename": original_name,
+                    "stored_name": stored_name,
+                    "file_url": signed_url,
+                    "file_type": "docx" if file_ext == ".docx" else "pdf" if file_ext == ".pdf" else "unknown"
+                }
     
     raise HTTPException(status_code=404, detail="File not found in Supabase Storage.")
