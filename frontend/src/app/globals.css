@@ -82,6 +82,7 @@ body {
 .badge-amber  { background: #FFFBEB;   color: #D97706; border: 1px solid #FDE68A; }
 .badge-green  { background: #F0FDF4;   color: #16A34A; border: 1px solid #BBF7D0; }
 .badge-red    { background: #FEF2F2;   color: #DC2626; border: 1px solid #FECACA; }
+.badge-slate  { background: #F1F5F9;   color: #64748B; border: 1px solid #E2E8F0; }
 
 /* ── Animations ─────────────────────────────────────────────────────── */
 @keyframes fadeUp {
@@ -94,7 +95,24 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes checkmark {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-check { animation: checkmark 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
 
 .fade-up { animation: fadeUp 0.5s ease both; }
 .pulse-glow { animation: pulse-glow 2.5s ease infinite; }
 .blink { animation: blink 2s ease infinite; }
+.pulse { animation: pulse 2s ease-in-out infinite; }
+.float { animation: float 3s ease-in-out infinite; }
+
+.loading-dots span {
+  animation: blink 1.4s infinite both;
+}
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }

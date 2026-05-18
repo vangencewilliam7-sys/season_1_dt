@@ -8,7 +8,8 @@ import '../auth.css'
 
 export default function SignInPage() {
   const router = useRouter()
-  const [role, setRole] = useState('doctor')
+  const [sector, setSector] = useState('Healthcare')
+  const [domain, setDomain] = useState('Doctor')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -19,11 +20,28 @@ export default function SignInPage() {
     setLoading(true)
     setError('')
 
-    if (!hasSupabaseConfig) {
+    const dummyAccounts = [
+      { email: 'doctor@hospital.com', pass: 'password123', targetSector: 'Healthcare', targetRole: 'Doctor' },
+      { email: 'manager@services.com', pass: 'password123', targetSector: 'Services', targetRole: 'Project Manager' },
+      { email: 'tutor@academy.com', pass: 'password123', targetSector: 'Education', targetRole: 'Tutor' },
+    ]
+
+    const matched = dummyAccounts.find(a => a.email === email && a.pass === password)
+
+    if (matched) {
       setTimeout(() => {
         setLoading(false)
-        router.push(role === 'doctor' ? '/dashboard' : '/chat')
-      }, 500)
+        // Auto-select correct sector/role for the dummy user
+        setSector(matched.targetSector)
+        setDomain(matched.targetRole)
+        router.push('/dashboard')
+      }, 800)
+      return
+    }
+
+    if (!hasSupabaseConfig) {
+      setLoading(false)
+      setError('Invalid credentials. Please use one of the dummy accounts or configure Supabase.')
       return
     }
 
@@ -39,46 +57,49 @@ export default function SignInPage() {
       return
     }
 
-    router.push(role === 'doctor' ? '/dashboard' : '/chat')
+    router.push('/dashboard')
   }
 
   return (
     <div className="auth-shell">
       <div className="auth-card fade-up">
-        <div className="auth-brand">
-          <span className="auth-brand-mark">⚕</span>
-          <div className="auth-brand-copy">
-            <span className="auth-brand-title">Doctor Twin</span>
-            <span className="auth-brand-caption">Season 1 · DT</span>
-          </div>
-        </div>
-
         <div className="auth-header">
           <h1 className="auth-title">Welcome back</h1>
-          <p className="auth-subtitle">
-            Sign in to the Digital Twin workspace.
-          </p>
         </div>
 
         {error ? <div className="auth-error">{error}</div> : null}
 
         <form className="auth-form" onSubmit={handleSignIn}>
-          <div className="auth-row">
-            {['doctor', 'patient'].map((nextRole) => (
-              <label
-                key={nextRole}
-                className={`auth-role ${role === nextRole ? 'active' : ''}`}
-              >
-                <input
-                  type="radio"
-                  name="role"
-                  value={nextRole}
-                  checked={role === nextRole}
-                  onChange={() => setRole(nextRole)}
-                />
-                <span>{nextRole === 'doctor' ? 'Doctor' : 'Patient'}</span>
-              </label>
-            ))}
+          {/* Sector Dropdown */}
+          <div className="auth-field">
+            <label className="auth-label" htmlFor="sector">Sector</label>
+            <select
+              id="sector"
+              className="auth-input"
+              value={sector}
+              onChange={(e) => setSector(e.target.value)}
+              required
+            >
+              <option value="Healthcare">Healthcare</option>
+              <option value="Services">Services</option>
+              <option value="Education">Education</option>
+            </select>
+          </div>
+
+          {/* Role Dropdown */}
+          <div className="auth-field">
+            <label className="auth-label" htmlFor="domain">Role</label>
+            <select
+              id="domain"
+              className="auth-input"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              required
+            >
+              <option value="Doctor">Doctor</option>
+              <option value="Project Manager">Project Manager</option>
+              <option value="Tutor">Tutor</option>
+            </select>
           </div>
 
           <div className="auth-field">
@@ -87,7 +108,7 @@ export default function SignInPage() {
               id="email"
               type="email"
               className="auth-input"
-              placeholder="doctor@hospital.com"
+              placeholder="user@example.com"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
@@ -118,7 +139,7 @@ export default function SignInPage() {
 
         {!hasSupabaseConfig ? (
           <p className="auth-note">
-            Supabase browser auth is not configured in `.env.local`, so this route falls back to local navigation for development.
+            Supabase browser auth is not configured, falling back to local navigation.
           </p>
         ) : null}
 

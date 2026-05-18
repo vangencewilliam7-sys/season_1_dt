@@ -53,7 +53,7 @@ export default function PersonaDashboard() {
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F4F7FB', fontFamily: 'var(--font-sans), Inter, system-ui, sans-serif' }}>
       <Sidebar active="/persona" />
 
-      <main style={{ flex: 1, padding: '40px', overflow: 'auto' }}>
+      <main style={{ flex: 1, padding: '40px', overflowY: 'auto', minWidth: 0 }}>
         <div className="fade-up" style={{ marginBottom: 40 }}>
           <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8, color: '#03045E' }}>Expert Persona Architecture</h1>
           <p style={{ color: '#475569', fontSize: 15, maxWidth: '600px' }}>
@@ -62,7 +62,11 @@ export default function PersonaDashboard() {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: 32 }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', 
+          gap: 32 
+        }}>
           
           {/* LEFT COLUMN: IDENTITY & TUNING */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>

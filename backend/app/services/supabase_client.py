@@ -36,31 +36,32 @@ class SupabaseService:
         self,
         embedding: list[float],
         domain_id: str | None = None,
+        workflow_id: str | None = None,
         limit: int = 1,
     ):
         """
         High-purity search against verified expert logic only.
 
         Args:
-            embedding:  Query vector from EmbeddingService.
-            domain_id:  Optional FK from the `domains` table. When provided,
-                        restricts results to a single domain (e.g., Healthcare).
-                        This is the primary isolation mechanism between twins.
-            limit:      Max results to return.
+            embedding:    Query vector from EmbeddingService.
+            domain_id:    Optional FK from the `domains` table. When provided,
+                          restricts results to a single domain (e.g., Healthcare).
+                          This is the primary isolation mechanism between twins.
+            workflow_id:  Optional FK from the `workflows` table.
+            limit:        Max results to return.
         """
         if not self.client: return []
 
-        query = self.client.rpc("match_expert_dna", {
+        # Always call the 5-param overload to avoid Supabase PGRST203 ambiguity
+        rpc_params = {
             "query_embedding": embedding,
-            "match_threshold": 0.40, # Lowered — short queries vs long expert paragraphs yield ~0.5-0.6 similarity
-            "match_count": limit
-        })
+            "match_threshold": 0.40,
+            "match_count": limit,
+            "p_domain_id": domain_id,
+            "p_workflow_id": workflow_id,
+        }
 
-        # Apply domain FK filter when provided — prevents cross-twin contamination
-        if domain_id:
-            query = query.eq("domain_id", domain_id)
-
-        response = query.execute()
+        response = self.client.rpc("match_expert_dna", rpc_params).execute()
         return response.data
 
     def insert_chat_audit_log(self, data: dict):

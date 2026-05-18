@@ -11,7 +11,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello. I'm Dr. [Expert]'s Digital Twin. I can answer questions grounded in verified clinical decisions and documented protocols. How can I help you today?",
+      content: "Hello. I'm the Expert Digital Twin. I can answer questions grounded in verified professional decisions and documented protocols. How can I help you today?",
       confidence: 0.97,
       mode: 'primary',
       sources: [],
@@ -87,7 +87,7 @@ export default function ChatPage() {
       const res = await fetch(`${API}/api/chat/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expert_id: 'demo', message: input, session_id: 'demo-session' }),
+        body: JSON.stringify({ expert_id: 'demo', message: input, session_id: 'demo-session', domain: 'it', role: 'project_manager' }),
       })
       const data = await res.json()
       const assistantMessage = {
@@ -150,7 +150,7 @@ export default function ChatPage() {
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Twin Chat</h1>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-              Expert: Fertility Specialist · Domain: Healthcare
+              Expert: Principal Specialist · Domain: Professional Services
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -190,7 +190,7 @@ export default function ChatPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 16,
               }}>
-                {msg.role === 'user' ? '👤' : '⚕️'}
+                {msg.role === 'user' ? '👤' : '✨'}
               </div>
 
               {/* Bubble */}
@@ -256,7 +256,7 @@ export default function ChatPage() {
                       )}
                       {msg.mode && (
                         <span className={`badge ${msg.mode === 'primary' ? 'badge-teal' : 'badge-amber'}`}>
-                          {msg.mode === 'primary' ? '⚕ Expert Voice' : '◎ Deputy Mode'}
+                          {msg.mode === 'primary' ? '✨ Expert Voice' : '◎ Deputy Mode'}
                         </span>
                       )}
                       {msg.sources?.length > 0 && (
@@ -275,7 +275,7 @@ export default function ChatPage() {
                 width: 38, height: 38, borderRadius: 'var(--radius-sm)',
                 background: '#F0FDFA', border: '2px solid #99F6E4',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
-              }}>⚕️</div>
+              }}>✨</div>
               <div style={{
                 padding: '14px 22px', borderRadius: '4px 18px 18px 18px',
                 background: '#FFFFFF', border: '1px solid var(--border)',
@@ -329,7 +329,7 @@ export default function ChatPage() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-              placeholder="Ask the Doctor Twin a clinical question..."
+              placeholder="Ask the Expert Twin a professional question..."
               style={{
                 flex: 1, padding: '13px 18px',
                 background: 'var(--bg-elevated)',
@@ -359,7 +359,7 @@ export default function ChatPage() {
             </button>
           </div>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
-            Responses are grounded in verified Master Cases. HIPAA-compliant. Not a substitute for clinical consultation.
+            Responses are grounded in verified Master Cases. Secure & Confidential. Not a substitute for primary consultation.
           </p>
         </div>
       </main>

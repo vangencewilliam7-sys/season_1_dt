@@ -6,9 +6,19 @@ class ContextManager:
     """
     Manages industry-specific 'Context Packs' to keep the core engine agnostic.
     """
-    def __init__(self, industry: str = "fertility"):
+    def __init__(self, industry: str = "universal"):
         self.industry = industry
         self.contexts = {
+            "universal": {
+                "domain_name": "Professional Services Hub",
+                "expert_role": "Senior Principal Specialist",
+                "semantic_markers": [
+                    r"\btypically\b", r"\bgenerally\b", r"\busually\b", 
+                    r"\boptimal\b", r"\bconsider\b", r"\bstandard practice\b"
+                ],
+                "risk_keywords": ["critical", "failure", "blocker", "compliance"],
+                "decision_archetypes": ["Strategic", "Operational", "Tactical"]
+            },
             "fertility": {
                 "domain_name": "Fertility Clinical Triage",
                 "expert_role": "Senior Reproductive Endocrinologist",
@@ -33,7 +43,7 @@ class ContextManager:
 
     def get_context(self) -> Dict[str, Any]:
         """Returns the context dictionary for the current industry."""
-        return self.contexts.get(self.industry, self.contexts["fertility"])
+        return self.contexts.get(self.industry, self.contexts["universal"])
 
     def get_prompt_jacket(self, base_instruction: str) -> str:
         """Surrounds a base instruction with industry-specific context."""
