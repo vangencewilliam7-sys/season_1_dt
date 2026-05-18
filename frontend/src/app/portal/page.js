@@ -2,65 +2,37 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChatService } from '../../lib/api/services/ChatService'
+import { DEMO_TRANSCRIPT } from '../../lib/demo/demo_seed'
 
 export default function ClientPortal() {
   const router = useRouter()
   const [sessionId, setSessionId] = useState('demo-session')
   const [domain, setDomain] = useState('education')
   const [role, setRole] = useState('tutor')
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const bottomRef = useRef(null)
+  const [demoStep, setDemoStep] = useState(0)
 
   useEffect(() => {
-    let sId = 'demo-session'
-    let dom = 'education'
-    let rol = 'tutor'
-    
+    let dom = 'healthcare'
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
-      sId = params.get('session_id') || 'demo-session'
-      dom = params.get('domain') || 'education'
-      rol = params.get('role') || 'tutor'
-      setSessionId(sId)
+      dom = params.get('domain') || 'healthcare'
       setDomain(dom)
-      setRole(rol)
     }
 
-    async function initialFetch() {
-      try {
-        const data = await ChatService.getHistory(sId)
-        if (data && data.messages && data.messages.length > 0) {
-          setMessages(data.messages)
-        } else {
-          // Set welcome message dynamically
-          const welcome = dom === 'healthcare'
-            ? "Hello! I am your AI Health Twin. I've initialized your patient profile and am ready to support your clinical triage screening. How are you feeling today?"
-            : "Hello! I am your AI assistant. I'm here to help you manage your tasks and answer your questions."
-          setMessages([
-            {
-              role: 'assistant',
-              content: welcome,
-              sender: 'twin'
-            }
-          ])
-        }
-      } catch (e) {
-        console.error("Failed to fetch history", e)
+    // Hardcode the welcome message for the demo video
+    setMessages([
+      {
+        role: 'assistant',
+        content: dom === 'healthcare'
+          ? "Hello! I am your AI Health Twin. I've initialized your patient profile and am ready to support your clinical triage screening. How are you feeling today?"
+          : "Hello! I am your AI assistant. I'm here to help you manage your tasks and answer your questions.",
+        sender: 'twin'
       }
-    }
-
-    initialFetch()
-
-    const interval = setInterval(async () => {
-      try {
-        const data = await ChatService.getHistory(sId)
-        if (data && data.messages && data.messages.length > 0) {
-          setMessages(data.messages)
-        }
-      } catch (e) {
-        console.error("Failed polling history:", e)
-      }
-    }, 2500)
-
-    return () => clearInterval(interval)
+    ])
   }, [])
 
   useEffect(() => {
@@ -73,27 +45,31 @@ export default function ClientPortal() {
     setInput('')
     setLoading(true)
 
-    try {
-      await ChatService.sendMessage({ 
-        expert_id: 'demo', 
-        message: currentInput, 
-        session_id: sessionId, 
-        domain: domain, 
-        role: role 
-      });
-      const data = await ChatService.getHistory(sessionId)
-      if (data && data.messages) {
-        setMessages(data.messages)
+    // Add the user's typed message to the UI
+    setMessages(prev => [...prev, {
+      role: 'user',
+      content: currentInput,
+      sender: 'patient'
+    }])
+
+    // Fake the AI thinking delay for the video
+    setTimeout(() => {
+      const twinIndex = demoStep * 2 + 1; // 1, 3, 5, 7
+      
+      if (DEMO_TRANSCRIPT[twinIndex]) {
+        setMessages(prev => [...prev, DEMO_TRANSCRIPT[twinIndex]])
       }
-    } catch {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: '⚠ Connection Error.',
-        sender: 'twin'
-      }])
-    } finally {
+
+      // If we just sent message 7, trigger the expert override (message 8) 2 seconds later!
+      if (twinIndex === 7) {
+        setTimeout(() => {
+          setMessages(prev => [...prev, DEMO_TRANSCRIPT[8]])
+        }, 2000)
+      }
+
+      setDemoStep(prev => prev + 1)
       setLoading(false)
-    }
+    }, 1500)
   }
 
   return (
@@ -218,14 +194,14 @@ export default function ClientPortal() {
                 color: 'white', fontSize: '20px', fontWeight: 'bold',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
               }}>
-                {msg.role === 'user' ? 'U' : (msg.sender === 'human_expert' ? '👨‍🏫' : '🤖')}
+                {msg.role === 'user' ? 'U' : (msg.sender === 'human_expert' ? '👨‍⚕️' : '👨‍⚕️')}
               </div>
 
               {/* Bubble */}
               <div style={{ maxWidth: '75%' }}>
                 {msg.role === 'assistant' && (
-                  <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '4px', paddingLeft: '4px' }}>
-                    {msg.sender === 'human_expert' ? 'Expert Tutor' : 'AI Assistant'}
+                  <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '4px', paddingLeft: '4px', fontWeight: 'bold' }}>
+                    {msg.sender === 'human_expert' ? 'Dr. Venkatesh (Senior Physician)' : 'Expert Physician'}
                   </div>
                 )}
                 <div style={{
@@ -250,7 +226,7 @@ export default function ClientPortal() {
                 width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0,
                 background: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: 'white', fontSize: '20px', fontWeight: 'bold'
-              }}>🤖</div>
+              }}>👨‍⚕️</div>
               <div style={{ padding: '16px 20px', borderRadius: '4px 20px 20px 20px', background: '#FFFFFF', border: '1px solid #E2E8F0', display: 'flex', gap: '6px', alignItems: 'center' }}>
                 <span style={{ width: '8px', height: '8px', background: '#94A3B8', borderRadius: '50%', animation: 'blink 1s infinite' }}></span>
                 <span style={{ width: '8px', height: '8px', background: '#94A3B8', borderRadius: '50%', animation: 'blink 1s infinite 0.2s' }}></span>

@@ -79,11 +79,10 @@ async def chat_message(req: ChatRequest):
         # Escalate immediately without instantiating or executing the LangGraph pipeline
         return {
             "response": (
-                "🚨 **PRE-GRAPH GATEKEEPER ESCALATION**\n\n"
-                "Critical medical emergency or severe acute risk identified at API ingress boundary.\n\n"
-                "**Immediate Action Required:**\n"
-                "Please call standard emergency services (911) or proceed directly to your nearest emergency room. "
-                "Automated agentic inference has been bypassed to ensure absolute patient safety."
+                "🚨 **Please Seek Immediate Medical Attention**\n\n"
+                "I am extremely concerned by what you are describing. These symptoms indicate a critical medical emergency that cannot be safely evaluated online.\n\n"
+                "**Please take this seriously and act immediately:**\n"
+                "Call your local emergency services (911) right now, or proceed immediately to the nearest emergency room. Do not wait for an appointment."
             ),
             "confidence": 1.0,
             "persona_mode": "deputy",

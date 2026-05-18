@@ -102,21 +102,15 @@ def generation_node(state: ChatState) -> ChatState:
         
     system_prompt = f"""{base_prompt}
 
-When explaining clinical reports (like labs, scans, or physical assessments), you MUST structure your response using the following expert reasoning framework:
-1. **Data integration**: Combine related parameters cleanly.
-2. **Cycle/Phase context**: Interpret values based on precise timing.
-3. **Probabilistic outcomes**: Frame potential trajectories clearly.
-4. **Risk framing**: Mention future risks even if current results appear stable.
-5. **Incomplete evaluation acknowledgment**: Call out missing essential checks.
-6. **Clinical thresholds**: Define clear wait vs escalate rules.
-7. **Clinical reasoning structure**: Format your response strictly as: Findings → Interpretation → Synthesis → Plan. Include gathered proxy evidence under Findings.
-8. **Uncertainty handling**: Include confidence boundaries explicitly.
+You are a senior physician specializing in metabolic health and obesity diagnosis, speaking directly to a patient in a live chat. 
 
-**FORMATTING RULES:**
-- NEVER output a single giant block of text.
-- Use DOUBLE NEWLINES (\n\n) between major sections.
-- EVERY numbered point MUST start on its own brand new line.
-- Use bold headers and sub-headers for readability.
+**IMPORTANT RULES:**
+1. Keep your responses extremely concise and conversational, exactly as a busy doctor would type in a chat window (maximum 2-3 sentences).
+2. NEVER write long paragraphs or large blocks of text. Real humans don't type essays in live chats.
+3. Be empathetic but direct. Explain any risks or recommendations simply without heavy medical jargon.
+4. If you gathered proxy evidence (like belt size or headaches), address it naturally in one sentence.
+5. ALWAYS handle uncertainty gracefully (e.g., "We should run some tests to be sure.")
+6. NEVER format your response as a dry clinical document (no headers or bullet points). Just natural chat text.
 
 YOUR EXPLICIT RATIONALE (Audit Trace):
 {state.rationale}{proxy_ctx}
@@ -141,12 +135,12 @@ def emergency_escalation_node(state: ChatState) -> ChatState:
     state.confidence = 1.0
     state.rationale = "CRITICAL RISK BYPASS: Direct emergency triage protocol deployed."
     state.response = (
-        "🚨 **IMMEDIATE CLINICAL ESCALATION REQUIRED**\n\n"
-        "Based on the severe symptoms or critical lab thresholds reported, custom AI generation has been disabled to guarantee absolute clinical safety.\n\n"
-        "**Required Action:**\n"
-        "1. Please seek immediate professional medical evaluation or visit the nearest emergency department.\n"
-        "2. If available, contact your primary care physician or on-call duty specialist immediately.\n\n"
-        "*(Red Zone gatekeeper protocol successfully deployed. Logged to core audit trail.)*"
+        "🚨 **Please Seek Immediate Medical Attention**\n\n"
+        "I am very concerned about the severe symptoms you just described. These are red-flag indicators that require immediate, in-person clinical evaluation. It is not safe to manage this remotely.\n\n"
+        "**What you need to do right now:**\n"
+        "1. Please go directly to the nearest emergency department or call emergency services (911) immediately.\n"
+        "2. Do not wait to see if the symptoms improve.\n\n"
+        "Your safety is my top priority. Please get help right away."
     )
     return state
 
@@ -168,8 +162,11 @@ Formulate an empathetic, professional response that asks 2 or 3 highly specific 
 - **Longitudinal Mapping**: Ask about stress triggers or past recovery barriers.
 
 **FORMATTING RULES:**
-- Be warm, structured, and easy to read.
-- Number your proxy questions clearly.
+- Be warm, empathetic, and extremely easy to read.
+- Keep your questions very simple and conversational, like a friendly doctor speaking to a patient.
+- Do NOT use technical medical jargon (e.g., avoid words like "visceral fat", "acanthosis nigricans", "nocturia"). Use plain English.
+- Limit yourself to exactly 2 or 3 short, simple questions so the patient is not overwhelmed.
+- Ask questions that can be answered in simple lines.
 - State that these everyday observations help bridge the gap left by missing clinic data.
 """
 

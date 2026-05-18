@@ -247,7 +247,6 @@ export default function ChatPage() {
             >
               🌐 Open Patient Portal
             </button>
-          </div>
             <span className="badge badge-teal">RAG Active</span>
             <span className="badge badge-blue">HIPAA Mode</span>
             <button

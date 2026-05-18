@@ -7,6 +7,13 @@ from fastapi.staticfiles import StaticFiles
 from .api import ingest, query, chat, stats, patients
 import os
 from contextlib import asynccontextmanager
+import logging
+
+class EndpointFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.getMessage().find("/api/chat/history") == -1
+
+logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 # Skills Layer Imports
 from .skills.api.routes import router as skills_router
